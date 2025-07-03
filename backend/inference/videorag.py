@@ -1,0 +1,179 @@
+import os
+import torch
+import json
+import jsonschema
+from typing import List, Dict, Any, Optional
+from string import Template
+
+from inference.llm_client import OllamaClient
+from inference.context_extractor import ContextExtractor
+from inference.chat_history import ChatHistory
+
+PROMPT_DIR = "./inference/prompts"
+
+class VideoRAG:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(VideoRAG, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self):
+        if self._initialized:
+            return 
+        
+        self.ollama_client = OllamaClient()
+        self.context_extractor = ContextExtractor()
+        self.chat_history = ChatHistory()
+
+        # Load text prompts
+        self.planning_text = self._load_text_prompts("planning.txt")
+        self.prompts = {
+            "timepin": self._load_text_prompts("timepin.txt"),
+            "timestamps": self._load_text_prompts("timestamps.txt"),
+            "summary": self._load_text_prompts("summary.txt"),
+            "query": self._load_text_prompts("query.txt"),
+            "ignore": self._load_text_prompts("ignore.txt")
+        }
+
+        # Initialize easyocr
+        # self.easyocr_reader = easyocr.Reader(
+        #     lang_list=["en"], 
+        #     gpu=torch.cuda.is_available()  
+        # )
+
+        self._initialized = True
+
+    def _load_text_prompts(self, prompt_name: str):
+        with open(os.path.join(PROMPT_DIR, prompt_name), "r", encoding="utf-8") as f:
+            return f.read()
+        
+    def _plan(self, plan_messages: List[Dict[str, Any]], max_retries: int = 10, **kwargs):
+        config = {
+                "mode": "summary",
+                "timestamp_range": None
+        }
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                planner_output = self.ollama_client.plan(plan_messages)
+                print(f"Planner output: \n{planner_output}")
+
+                # Route and validate the planner output
+                config = self._route_and_validate(planner_output)
+                break
+            except Exception as e:
+                retry_count += 1
+                print(f"Error on attempt {retry_count}: {e}")
+                if retry_count >= max_retries:
+                    print("Max retries reached, falling back to ignore mode")
+                    break
+
+        return config
+        
+    def _route_and_validate(self, raw_json: str) -> Dict[str, Any]:
+        router_schema = {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "enum": ["timestamps", "summary", "query"]
+                },
+                "timestamp_range": {
+                    "anyOf": [
+                        {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+                        {"type": "null"}
+                    ]
+                }
+            },
+            "required": ["mode", "timestamp_range"]
+        }
+
+        try:
+            config = json.loads(raw_json)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Router output is not valid JSON: {e}")
+        
+        jsonschema.validate(config, router_schema)
+        return config
+    
+    
+    def ask(self, question: str, video_names: List[str], chat_id: int, model: str, think: bool, video_mode: str):
+        # Use planner LLM with loaded prompt
+        messages = []
+        summary = ""
+        refined_question = question[:]
+        output_prompt = self.prompts["ignore"]
+        print(f"Video names: {video_names}")
+
+        # Get chat history and add new question
+        previous_messages = self.chat_history.get_messages_for_llm(chat_id)
+        print(f"Previous messages: \n{previous_messages}")
+
+        if previous_messages:
+            summary = self.ollama_client.get_summary(previous_messages)
+            print(f"Summary: \n{summary}")
+            messages.append({"role": "assistant", "content": summary})
+
+        if video_names:
+            # Use string replacement instead of .format() to avoid conflicts with JSON braces
+            video_metadatas = [self.context_extractor.get_video_metadata_context(video_name) for video_name in video_names]
+            plan_prompt = Template(self.planning_text).substitute(video_metadatas=repr(video_metadatas))
+            plan_messages = [
+                {"role": "system", "content": plan_prompt},
+                {"role": "user", "content": question}
+            ]
+            if video_mode:
+                config = { "mode": video_mode, "timestamp_range": None }
+                print(f"Config: {config}")
+            else:
+                config = self._plan(plan_messages)
+
+            if config["mode"] == "query":
+                refined_question = self.ollama_client.refine_question(question, summary)
+
+            # Get formatted context from ContextExtractor
+            context = self.context_extractor.format_context(config, refined_question, video_names)
+            print(f"Context: {context}")
+            
+            # Format the question and context for the answerer
+            output_prompt = Template(self.prompts[config["mode"]]).substitute(context=context)
+
+        messages = [
+            {"role": "system", "content": output_prompt},
+            *messages,
+            {"role": "user", "content": refined_question}
+        ]
+
+        self.chat_history.add_message(chat_id, "user", question)
+        
+        # Get streaming response from LLM
+        full_response = ""
+        full_thinking = ""
+        for chunk in self.ollama_client.answer(messages, think=think, stream=True, model=model):
+            content = chunk.get("message", {}).get("content", "")
+            think_content = chunk.get("message", {}).get("thinking", "")
+            done = chunk.get("done", False)
+
+            print(f"Sending chunk: {content}, think: {think}, done: {done}")
+            
+            if think_content:
+                response_data = {"chat_id": chat_id, "type": "thinking", "content": think_content, "done": done}
+                full_thinking += think_content
+            else:
+                response_data = {"chat_id": chat_id, "type": "markdown", "content": content, "done": done}
+                full_response += content
+
+            yield response_data
+
+        # Store complete messages only after streaming is finished
+        if full_thinking:
+            self.chat_history.add_message(chat_id, "thinking", full_thinking)
+        if full_response:
+            self.chat_history.add_message(chat_id, "assistant", full_response)
+
+if __name__ == "__main__":
+    videorag = VideoRAG()

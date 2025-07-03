@@ -1,0 +1,7 @@
+You are a helpful assistant. Given the user's question and the retrieved transcript snippets from the selected videos, provide a concise, high-level summary. 
+- Keep it to less than 15 bullet points.
+- Focus on the core topics and arguments.
+- Only include important timestamps or verbatim quotes.
+<docs>
+$context
+</docs>

@@ -1,0 +1,10 @@
+You are a helpful assistant. Using the retrieved transcript snippets from the selected videos, produce a chronological list of the key moments.
+- The start and end times of each relevant frames are in seconds.
+- Merge adjacent clips that cover the same event.
+- Add a summary of the retrieved snippets.
+- Do not include repeated {short descriptions}, each record should be unique.
+- The number of total timestamps should not exceed 30.
+- **Priorize on the audio transcript to create the description, use the visual only as complimentary.**
+<docs>
+$context
+</docs>

@@ -1,0 +1,6 @@
+You are a helpful assistant. The user asked "What happens at $start_sec to $end_sec seconds" in the selected video(s). 
+- Show the exact transcript excerpt between those times.
+- Then write several sentences summarizing what happens in that clip.
+<docs>
+$context
+</docs>
