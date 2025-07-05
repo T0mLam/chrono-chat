@@ -1,10 +1,28 @@
-You are a helpful assistant. Using the retrieved transcript snippets from the selected videos, produce a chronological list of the key moments.
-- The start and end times of each relevant frames are in seconds.
-- Merge adjacent clips that cover the same event.
-- Add a summary of the retrieved snippets.
-- Do not include repeated {short descriptions}, each record should be unique.
-- The number of total timestamps should not exceed 30.
-- **Priorize on the audio transcript to create the description, use the visual only as complimentary.**
+You are a helpful assistant. Given the transcript and visual snippets in <docs>, extract a chronological list of key moments that describe what happens, focusing on what is said.
+- Use the transcript as the main source of meaning.
+- Only include visuals if they clarify the speech.
+- Merge or group similar or repeated segments.
+- Do not list scenes that are purely visual.
+- Cover as much as the video content as possible.
+- Each entry must include:
+    - A start and end time in seconds
+    - A short, speech-based description
+
+Example Output:
+
+```
+Key Moments
+
+1. **[start – end]**
+   Short description of what is said or done.
+
+2. **[start – end]**
+   ...
+
+Summary
+A paragraph summarizing the main story or message.
+```
+
 <docs>
 $context
 </docs>

@@ -2,7 +2,7 @@ import os
 import torch
 import json
 import jsonschema
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 from string import Template
 
 from inference.llm_client import OllamaClient
@@ -101,7 +101,7 @@ class VideoRAG:
         return config
     
     
-    def ask(self, question: str, video_names: List[str], chat_id: int, model: str, think: bool, video_mode: str):
+    async def ask(self, question: str, video_names: List[str], chat_id: int, model: str, think: bool, video_mode: str, send_client: Callable = lambda **kwargs: None):
         # Use planner LLM with loaded prompt
         messages = []
         summary = ""
@@ -114,6 +114,7 @@ class VideoRAG:
         print(f"Previous messages: \n{previous_messages}")
 
         if previous_messages:
+            await send_client(status="summarizing_history")
             summary = self.ollama_client.get_summary(previous_messages)
             print(f"Summary: \n{summary}")
             messages.append({"role": "assistant", "content": summary})
@@ -130,17 +131,20 @@ class VideoRAG:
                 config = { "mode": video_mode, "timestamp_range": None }
                 print(f"Config: {config}")
             else:
+                await send_client(status="selecting_mode")
                 config = self._plan(plan_messages)
 
             if config["mode"] == "query":
+                await send_client(status="refining_query")
                 refined_question = self.ollama_client.refine_question(question, summary)
 
+            await send_client(status="retriving_context")
             # Get formatted context from ContextExtractor
             context = self.context_extractor.format_context(config, refined_question, video_names)
-            print(f"Context: {context}")
             
             # Format the question and context for the answerer
             output_prompt = Template(self.prompts[config["mode"]]).substitute(context=context)
+            print(f"Output prompt: \n{output_prompt}")
 
         messages = [
             {"role": "system", "content": output_prompt},
@@ -150,6 +154,8 @@ class VideoRAG:
 
         self.chat_history.add_message(chat_id, "user", question)
         
+        await send_client(status="loading_model")
+
         # Get streaming response from LLM
         full_response = ""
         full_thinking = ""
@@ -157,8 +163,6 @@ class VideoRAG:
             content = chunk.get("message", {}).get("content", "")
             think_content = chunk.get("message", {}).get("thinking", "")
             done = chunk.get("done", False)
-
-            print(f"Sending chunk: {content}, think: {think}, done: {done}")
             
             if think_content:
                 response_data = {"chat_id": chat_id, "type": "thinking", "content": think_content, "done": done}

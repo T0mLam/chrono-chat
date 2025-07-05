@@ -1,0 +1,52 @@
+You are a helpful assistant. Given the retrieved transcript and visual snippets from the following video content surrounded by the <docs> tags, produce a **single, chronological list of key moments** that summarizes the events.
+**Please focus on understanding the video with Relevant Speech, rather than plainly describing each frame with Relevant Visual Scenes.**
+
+* Use the **audio transcript as the primary source** to understand what is happening.
+* Use the **visual descriptions to support or clarify** what the transcript may imply.
+* **Merge adjacent or overlapping clips** if they refer to the same topic or action.
+* **Each entry must include**:
+
+  * A **start and end time** in seconds.
+  * A **short, unique description** of what happens in that moment, **focus on Relevant Speech**.
+* **Avoid duplication**: do not repeat similar events or descriptions.
+* **Ensure coverage across the full video duration** — summarize key segments throughout, not just the beginning.
+* If two entries from transcript and visuals overlap, **merge them** and prioritize the transcript's meaning.
+* If the same person or action is seen repeatedly, **group it together** unless the context meaningfully changes.
+
+**Output format:**
+
+### Key Moments
+
+1. **[start_time – end_time]**
+   Description of the event.
+
+2. **[start_time – end_time]**
+   Description of the event.
+
+...
+
+### Summary
+A short paragraph summarizing the main events or storyline, based on both transcript and visuals.
+
+**Example Output:**
+
+```
+### Key Moments
+
+1. **\[0:51 – 0:54]**
+   Introduction of the main characters: a man in a striped shirt holding a phone and another in a hockey jersey sitting on a couch.
+
+2. **\[2:22 – 2:22]**
+   Transition to an academic setting: a man sits on a couch with a remote control, indicating a shift in focus.
+
+3. **\[4:21 – 4:26]**
+   Academic focus: man sitting on a couch, possibly studying or working, whiteboard in background.
+
+### Summary
+
+This video narrates an academic journey using both visual cues and transcript content. It begins with the introduction of two key individuals and transitions into academic and project-focused themes. Key milestones include a lecture segment, a student-led company showcase, and the progression into project development and final presentations. The visual emphasis on recurring characters like the blue-shirted man and contextual elements like a face mask hints at broader temporal or thematic context. The closing black screen with an "s" may signify summary, conclusion, or a placeholder for final remarks.
+```
+
+<docs>
+$context
+</docs>

@@ -106,7 +106,18 @@ export function AppSidebar() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "t" && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey && !((event.target as HTMLElement).tagName === "INPUT" || (event.target as HTMLElement).tagName === "TEXTAREA" || (event.target as HTMLElement).contentEditable === "true")) {
+      if (
+        event.key === "t" &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        !(
+          (event.target as HTMLElement).tagName === "INPUT" ||
+          (event.target as HTMLElement).tagName === "TEXTAREA" ||
+          (event.target as HTMLElement).contentEditable === "true"
+        )
+      ) {
         event.preventDefault();
         toggleSidebar();
       }
@@ -148,7 +159,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
+              className="data-[slot=sidebar-menu-button]:!p-1.5 mb-1"
             >
               <Link href="/">
                 <CircleArrowDown className="!size-5" />
@@ -156,11 +167,21 @@ export function AppSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild>
+                <Link href={item.url}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
         </SidebarMenu>
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
+        {/* <SidebarGroup>
           <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -176,7 +197,7 @@ export function AppSidebar() {
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
-        </SidebarGroup>
+        </SidebarGroup> */}
 
         <SidebarGroup>
           <SidebarGroupLabel>Chats</SidebarGroupLabel>

@@ -167,6 +167,12 @@ class ContextExtractor:
                 
         return asr_results, frame_results
     
+    def _timestamp_context(self, config: Dict[str, Any], question: str, video_name: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        asr_results, frame_results = self._summary_context(config, question, video_name)
+        asr_results["metadatas"] = sorted(asr_results["metadatas"], key=lambda x: x["ts_start"])
+        frame_results["metadatas"] = sorted(frame_results["metadatas"], key=lambda x: x["ts_start"])
+        return asr_results, frame_results
+            
     def _query_context(self, config: Dict[str, Any], question: str, video_name: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         frame_results = self._get_relevant_context(question, video_name, self.video_collection_name, n_results=100)
         # frame_results = self._mmr(frame_results, question, self.video_collection_name, n_results=50)
@@ -176,7 +182,7 @@ class ContextExtractor:
         # asr_results = self._mmr(asr_results, question, self.audio_collection_name, n_results=50)
         asr_results = self._rerank_with_bge(asr_results, question, n_results=15)
 
-        return frame_results, asr_results
+        return asr_results, frame_results
 
     def get_video_metadata(self, video_name: str) -> Dict[str, Any]:
         with sqlite3.connect(METADATA_DB) as conn:
@@ -232,8 +238,10 @@ class ContextExtractor:
             asr_results = {"metadatas": []}
             frame_results = {"metadatas": []}
             
-            if config["mode"] in ["summary", "timestamps"]:
+            if config["mode"] == "summary":
                 asr_results, frame_results = self._summary_context(config, question, video_name)
+            elif config["mode"] == "timestamps":
+                asr_results, frame_results = self._timestamp_context(config, question, video_name)
             elif config["mode"] == "query":
                 asr_results, frame_results = self._query_context(config, question, video_name)
 

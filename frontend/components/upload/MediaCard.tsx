@@ -53,7 +53,7 @@ export function MediaCard({ item, onDelete }: MediaCardProps) {
               alt={item.title}
               width={300}
               height={200}
-              className="rounded-lg w-full h-auto object-contain"
+              className="rounded-lg w-full h-auto object-cover"
             />
             <span className="absolute bottom-2 right-2 bg-black/70 bg-opacity-70 text-white text-xs px-2 py-0.5 rounded">
               {item.duration}
