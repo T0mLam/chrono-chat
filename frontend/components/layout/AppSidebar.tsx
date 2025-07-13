@@ -4,6 +4,7 @@ import {
   Calendar,
   CircleArrowDown,
   Coffee,
+  History,
   Home,
   Inbox,
   Library,
@@ -102,7 +103,7 @@ export function AppSidebar() {
   const [editingChatId, setEditingChatId] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const pathname = usePathname();
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, open, isMobile } = useSidebar();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -153,7 +154,7 @@ export function AppSidebar() {
   }, []);
 
   return (
-    <Sidebar className="z-50">
+    <Sidebar className="z-50" collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -169,7 +170,7 @@ export function AppSidebar() {
           </SidebarMenuItem>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton asChild tooltip={item.title}>
                 <Link href={item.url}>
                   <item.icon />
                   <span>{item.title}</span>
@@ -180,26 +181,47 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
+      {/* New Chat Button when sidebar is collapsed */}
       <SidebarContent>
-        {/* <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
+        <SidebarGroup hidden={open || isMobile}>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="New Chat">
+                  <Link
+                    href="/chat/-1"
+                    className="bg-indigo-100 text-indigo-950"
+                  >
+                    <Plus />
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* New Latest Chat Button when sidebar is expanded */}
+        {chats.length > 0 && (
+          <SidebarGroup hidden={open || isMobile}>
+            <SidebarGroupContent className="-mt-2">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Latest Chat">
+                    <Link
+                      href={`/chat/${chats[0].chat_id}`}
+                      className="bg-gray-300 text-gray-800"
+                    >
+                      <History />
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup> */}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
-        <SidebarGroup>
+        {/* Chats when sidebar is expanded */}
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
           <SidebarGroupLabel>Chats</SidebarGroupLabel>
           <SidebarGroupAction title="New Chat">
             <Link href="/chat/-1">

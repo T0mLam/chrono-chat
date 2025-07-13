@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Loader2, Trash } from "lucide-react";
+import { CheckCircle, Loader2, Trash, XCircle } from "lucide-react";
 import { DeleteAlert } from "./DeleteAlert";
 import { Progress } from "@/components/ui/progress";
 
@@ -67,7 +67,7 @@ export function MediaCard({ item, onDelete }: MediaCardProps) {
               <CardTitle>{item.title}</CardTitle>
               <div className="h-1" />
               <CardDescription>{item.time}</CardDescription>
-              {item.progress !== 100 && (
+              {item.progress !== 100 && item.status !== "Failed" && (
                 <div className="flex flex-row items-center gap-2 mt-1">
                   <span className="text-xs text-muted-foreground">
                     {item.progress}%
@@ -79,14 +79,29 @@ export function MediaCard({ item, onDelete }: MediaCardProps) {
             <div className="ml-3 flex items-center">
               {/* show the processing status and delete button */}
               {item.isProcessing ? (
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-row items-center">
                   <Button
                     variant="outline"
                     className="rounded-full text-xs flex items-center gap-2 disabled:opacity-100"
                     disabled
                   >
-                    <Loader2 className="animate-spin w-4 h-4" /> {item.status}
+                    {item.status === "Failed" ? (
+                      <XCircle className="text-red-500 w-4 h-4" />
+                    ) : (
+                      <Loader2 className="animate-spin w-4 h-4" />
+                    )}
+                    {item.status}
                   </Button>
+                  {item.status === "Failed" && (
+                    <Button
+                      variant="ghost"
+                      className="rounded-full cursor-pointer text-xs ml-2 hover:text-red-500 hover:bg-red-100"
+                      aria-label={`Delete ${item.title}`}
+                      onClick={handleDelete}
+                    >
+                      <Trash className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <>

@@ -24,11 +24,15 @@ import {
 } from "@/components/ui/tooltip";
 
 interface VideoAttachmentDialogueProps {
+  disabled: boolean;
   selectedVideos: string[];
-  setSelectedVideos: (videos: string[]) => void;
+  setSelectedVideos: (
+    videos: string[] | ((prev: string[]) => string[])
+  ) => void;
 }
 
 export function VideoAttachmentDialogue({
+  disabled,
   selectedVideos,
   setSelectedVideos,
 }: VideoAttachmentDialogueProps) {
@@ -61,13 +65,13 @@ export function VideoAttachmentDialogue({
   }, []);
 
   const handleToggleVideo = (filename: string, isSelected: boolean) => {
-    setSelectedVideos((prev) => {
+    setSelectedVideos((prev: string[]) => {
       let newSelectedVideos = [...prev];
 
       if (isSelected && newSelectedVideos.length < 3) {
         newSelectedVideos.push(filename);
       } else if (!isSelected) {
-        newSelectedVideos = prev.filter((video) => video !== filename);
+        newSelectedVideos = prev.filter((video: string) => video !== filename);
       }
       localStorage.setItem("selectedVideos", JSON.stringify(newSelectedVideos));
       return newSelectedVideos;
@@ -78,14 +82,21 @@ export function VideoAttachmentDialogue({
     <div className="flex gap-4 relative">
       <Dialog>
         <DialogTrigger asChild>
-          <TooltipToggle tooltip="Attach video embeddings">
+          <TooltipToggle
+            tooltip={
+              disabled
+                ? "Ignore mode for file attachments"
+                : "Attach video embeddings"
+            }
+            disabled={disabled}
+          >
             <FileVideo2 className="size-4" />
             <span className="text-xs absolute bottom-0 -right-[5px] rounded-full px-2 py-1">
               {selectedVideos.length > 0 ? selectedVideos.length : ""}
             </span>
           </TooltipToggle>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-4xl mx-auto">
+        <DialogContent className="sm:max-w-4xl max-h-[80vh] mx-auto flex flex-col">
           <DialogHeader>
             <DialogTitle>Your videos</DialogTitle>
             <DialogDescription>
@@ -93,17 +104,23 @@ export function VideoAttachmentDialogue({
               (max: 3 videos)
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 overflow-y-auto overflow-x-hidden">
-            {mediaData
-              .filter((video) => video.is_processed)
-              .map((video) => (
-                <VideoAttachmentCard
-                  item={video}
-                  key={video.filename}
-                  isSelected={selectedVideos.includes(video.filename)}
-                  onToggleChange={handleToggleVideo}
-                />
-              ))}
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5">
+              {mediaData
+                .filter(
+                  (video) =>
+                    video.task_progress === 100 &&
+                    video.task_status !== "Failed"
+                )
+                .map((video) => (
+                  <VideoAttachmentCard
+                    item={video}
+                    key={video.filename}
+                    isSelected={selectedVideos.includes(video.filename)}
+                    onToggleChange={handleToggleVideo}
+                  />
+                ))}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

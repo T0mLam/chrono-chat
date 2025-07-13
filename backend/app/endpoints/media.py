@@ -1,10 +1,11 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 import os
 import shutil
 from datetime import datetime
+import uuid
 
 from preprocessing.download_video import is_youtube_video_downloadable, download_youtube_video
 from app.worker import process_video
@@ -77,7 +78,7 @@ async def list_uploaded_videos():
     return videos
 
 @router.post("/upload/local_video", response_model=VideoResponse)
-async def upload_local_video(file: UploadFile = File(...)):
+async def upload_local_video(file: UploadFile = File(...), background_tasks: BackgroundTasks = BackgroundTasks()):
     try:
         if not any(file.filename.endswith(ext) for ext in ALLOWED_EXTENSIONS):
             raise HTTPException(status_code=400, detail="Invalid file extension")
@@ -89,16 +90,18 @@ async def upload_local_video(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
         
         # Start video processing task
-        task = process_video.delay(file_path)
+        task_id = str(uuid.uuid4())
         
         # Store initial metadata with task info
         store_video_metadata(
             video_path=file_path,
             audio_path="",  # Will be updated during processing
-            task_id=task.id,
+            task_id=task_id,
             task_status="Pending",
             task_progress=0
         )
+
+        background_tasks.add_task(process_video, file_path, 1.0, task_id)
         
         return VideoResponse(
             status="success",
@@ -115,21 +118,23 @@ async def check_youtube_video(url: str = Query(..., description="YouTube video U
     }
 
 @router.post("/upload/youtube_video", response_model=VideoResponse)
-async def upload_youtube_video(url: str = Query(..., description="YouTube video URL")):
+async def upload_youtube_video(url: str = Query(..., description="YouTube video URL"), background_tasks: BackgroundTasks = BackgroundTasks()):
     try:
         file_path = download_youtube_video(url, output_video_path=UPLOAD_DIR)
         
         # Start video processing task
-        task = process_video.delay(file_path)
+        task_id = str(uuid.uuid4())
     
         # Store initial metadata with task info
         store_video_metadata(
             video_path=file_path,
             audio_path="",  # Will be updated during processing
-            task_id=task.id,
+            task_id=task_id,
             task_status="Pending",
             task_progress=0
         )
+        
+        background_tasks.add_task(process_video, file_path, 1.0, task_id)
         
         return VideoResponse(
             status="success",

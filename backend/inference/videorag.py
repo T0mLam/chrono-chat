@@ -31,7 +31,6 @@ class VideoRAG:
         # Load text prompts
         self.planning_text = self._load_text_prompts("planning.txt")
         self.prompts = {
-            "timepin": self._load_text_prompts("timepin.txt"),
             "timestamps": self._load_text_prompts("timestamps.txt"),
             "summary": self._load_text_prompts("summary.txt"),
             "query": self._load_text_prompts("query.txt"),
@@ -49,8 +48,12 @@ class VideoRAG:
     def _load_text_prompts(self, prompt_name: str):
         with open(os.path.join(PROMPT_DIR, prompt_name), "r", encoding="utf-8") as f:
             return f.read()
+    
+    def refresh_chroma_client(self):
+        """Refresh the ChromaDB client to ensure it sees newly added embeddings."""
+        self.context_extractor.refresh_chroma_client()
         
-    def _plan(self, plan_messages: List[Dict[str, Any]], max_retries: int = 10, **kwargs):
+    async def _plan(self, plan_messages: List[Dict[str, Any]], max_retries: int = 10, **kwargs):
         config = {
                 "mode": "summary",
                 "timestamp_range": None
@@ -59,7 +62,7 @@ class VideoRAG:
         
         while retry_count < max_retries:
             try:
-                planner_output = self.ollama_client.plan(plan_messages)
+                planner_output = await self.ollama_client.plan(plan_messages)
                 print(f"Planner output: \n{planner_output}")
 
                 # Route and validate the planner output
@@ -100,26 +103,66 @@ class VideoRAG:
         jsonschema.validate(config, router_schema)
         return config
     
+    async def ask_multi_video(self, messages: List[Dict[str, Any]], config: Dict[str, Any], refined_question: str, video_names: List[str], video_metadatas: List[str], send_client: Callable = lambda **kwargs: None):
+        video_summaries = []
+
+        for i, video_name in enumerate(video_names):    
+            await send_client(status="retrieving_context", video_index=(i + 1), video_name=video_name)
+            context = self.context_extractor.format_context(config, refined_question, [video_name])
+            await send_client(status="summarizing_context", video_index=(i + 1), video_name=video_name)
+            video_summary = await self.ollama_client.get_video_summary(context, refined_question)
+
+            video_summary_message = f"=== Video {i + 1} ===\n"
+            video_summary_message += f"Video name: {video_name}\n"
+            video_summary_message += f"Video summary: \n{video_summary}\n\n"
+            video_summaries.append({"role": "assistant", "content": video_summary_message})
+            print(f"Video summary message: \n{video_summary_message}\n\n")
+
+        # output_prompt = Template(self.prompts[config["mode"]]).substitute(context="")
+
+        messages = [
+            {"role": "system", "content": self.prompts[config["mode"]]},
+            *messages,
+            *video_summaries,
+            {"role": "user", "content": refined_question}
+        ]
+
+        return messages
+    
+    async def ask_single_video(self, messages: List[Dict[str, Any]], config: Dict[str, Any], refined_question: str, video_names: List[str], send_client: Callable = lambda **kwargs: None):
+        await send_client(status="retrieving_context", video_name=video_names[0])
+        # Get formatted context from ContextExtractor
+        context = self.context_extractor.format_context(config, refined_question, video_names)
+        
+        messages = [
+            {"role": "system", "content": self.prompts[config["mode"]]},
+            *messages,
+            {"role": "assistant", "content": f"Here is the relevant context of the videos: \n{context}"},
+            {"role": "user", "content": refined_question}
+        ]
+
+        return messages
     
     async def ask(self, question: str, video_names: List[str], chat_id: int, model: str, think: bool, video_mode: str, send_client: Callable = lambda **kwargs: None):
         # Use planner LLM with loaded prompt
-        messages = []
+        multi_video = len(video_names) > 1
         summary = ""
         refined_question = question[:]
-        output_prompt = self.prompts["ignore"]
         print(f"Video names: {video_names}")
 
         # Get chat history and add new question
         previous_messages = self.chat_history.get_messages_for_llm(chat_id)
+        messages = previous_messages
         print(f"Previous messages: \n{previous_messages}")
 
-        if previous_messages:
-            await send_client(status="summarizing_history")
-            summary = self.ollama_client.get_summary(previous_messages)
+        # Add summary to messages if there are previous messages and video names
+        if previous_messages and video_names and video_mode != "ignore":
+            await send_client(status="summarizing_history", message_count=len(previous_messages))
+            summary = await self.ollama_client.get_summary(previous_messages)
             print(f"Summary: \n{summary}")
             messages.append({"role": "assistant", "content": summary})
 
-        if video_names:
+        if video_names and video_mode != "ignore":
             # Use string replacement instead of .format() to avoid conflicts with JSON braces
             video_metadatas = [self.context_extractor.get_video_metadata_context(video_name) for video_name in video_names]
             plan_prompt = Template(self.planning_text).substitute(video_metadatas=repr(video_metadatas))
@@ -132,34 +175,31 @@ class VideoRAG:
                 print(f"Config: {config}")
             else:
                 await send_client(status="selecting_mode")
-                config = self._plan(plan_messages)
+                config = await self._plan(plan_messages)
 
             if config["mode"] == "query":
                 await send_client(status="refining_query")
-                refined_question = self.ollama_client.refine_question(question, summary)
+                refined_question = await self.ollama_client.refine_question(question, summary)
 
-            await send_client(status="retriving_context")
-            # Get formatted context from ContextExtractor
-            context = self.context_extractor.format_context(config, refined_question, video_names)
-            
-            # Format the question and context for the answerer
-            output_prompt = Template(self.prompts[config["mode"]]).substitute(context=context)
-            print(f"Output prompt: \n{output_prompt}")
-
-        messages = [
-            {"role": "system", "content": output_prompt},
-            *messages,
-            {"role": "user", "content": refined_question}
-        ]
+            if multi_video:
+                messages = await self.ask_multi_video(messages, config, refined_question, video_names, video_metadatas, send_client)
+            else:
+                messages = await self.ask_single_video(messages, config, refined_question, video_names, send_client)
+        else:
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant that can answer questions."},
+                *messages,
+                {"role": "user", "content": refined_question}
+            ]
 
         self.chat_history.add_message(chat_id, "user", question)
         
-        await send_client(status="loading_model")
+        await send_client(status="loading_model", model=model)
 
         # Get streaming response from LLM
         full_response = ""
         full_thinking = ""
-        for chunk in self.ollama_client.answer(messages, think=think, stream=True, model=model):
+        async for chunk in await self.ollama_client.answer(messages, think=think, stream=True, model=model): # type: ignore
             content = chunk.get("message", {}).get("content", "")
             think_content = chunk.get("message", {}).get("thinking", "")
             done = chunk.get("done", False)

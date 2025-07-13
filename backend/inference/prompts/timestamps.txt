@@ -22,7 +22,3 @@ Key Moments
 Summary
 A paragraph summarizing the main story or message.
 ```
-
-<docs>
-$context
-</docs>

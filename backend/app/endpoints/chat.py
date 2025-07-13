@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+import asyncio
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Dict, Any
@@ -81,7 +82,8 @@ async def websocket_chat(websocket: WebSocket):
 
             if chat_id == video_rag.chat_history.get_new_chat_id():
                 video_rag.chat_history.create_chat(chat_id=chat_id)
-                name_chat.delay(chat_id, message)
+                # Run name_chat in background (can run simultaneously with video processing)
+                asyncio.create_task(name_chat(chat_id, message))
             
             # Get the generator from video_rag.ask() and iterate through it
             response_generator = video_rag.ask(message, video_names, chat_id, model, think, video_mode, send_client=send_client)
@@ -122,7 +124,8 @@ async def test_websocket_chat(websocket: WebSocket):
 
             if chat_id == video_rag.chat_history.get_new_chat_id():
                 video_rag.chat_history.create_chat(chat_id=chat_id)
-                name_chat.delay(chat_id, message)
+                # Run name_chat in background (can run simultaneously with video processing)
+                asyncio.create_task(name_chat(chat_id, message))
             
             video_rag.chat_history.add_message(chat_id, "user", message)
             messages = video_rag.chat_history.get_messages_for_llm(chat_id)
@@ -133,7 +136,7 @@ async def test_websocket_chat(websocket: WebSocket):
             }
             messages.insert(0, system_prompt)
 
-            stream = video_rag.ollama_client.answer(messages, think=think, model=model, stream=True)
+            stream = await video_rag.ollama_client.answer(messages, think=think, model=model, stream=True)
 
             full_response = ""
             full_thinking = ""
@@ -167,7 +170,8 @@ async def test_websocket_chat(websocket: WebSocket):
 @router.get("/local_models")
 async def get_local_models():
     models = []
-    for model in video_rag.ollama_client.client.list().models:
+    model_list = await video_rag.ollama_client.client.list()
+    for model in model_list.models:
         models.append({"name": model.model, "size": model.size})
     return {"models": models}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChatInput } from "@/components/ui/chat/chat-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,7 @@ import { ModelComboBox } from "./ModelComboBox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { SelectedVideoPreviews } from "./SelectedVideoPreviews";
 import { DataStatePropInterceptor } from "./DataStatePropInterceptor";
+import { FileUploadComponent } from "./FileUploadComponent";
 
 interface ChatBarProps {
   onSend: (
@@ -65,12 +66,18 @@ export function TooltipToggle({
 export function VideoModeToggles({
   hidden,
   selectedVideoMode,
+  selectedFiles,
   setSelectedVideoMode,
 }: {
   hidden: boolean;
   selectedVideoMode: string;
+  selectedFiles: File[];
   setSelectedVideoMode: (mode: string) => void;
 }) {
+  useEffect(() => {
+    setSelectedVideoMode(selectedFiles.length > 0 ? "ignore" : "");
+  }, [selectedFiles]);
+
   return (
     <ToggleGroup
       variant="outline"
@@ -80,6 +87,7 @@ export function VideoModeToggles({
       hidden={hidden}
       value={selectedVideoMode}
       onValueChange={(value) => setSelectedVideoMode(value || "")}
+      disabled={selectedFiles.length > 0}
     >
       <TooltipProvider>
         <Tooltip>
@@ -155,6 +163,7 @@ export default function ChatBar({
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
   const [selectedVideoMode, setSelectedVideoMode] = useState<string>("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,15 +216,13 @@ export default function ChatBar({
           />
         </div>
         <div className="flex items-center p-3 pt-0 bg-background">
-          <label className="cursor-pointer">
-            <input type="file" className="hidden" onChange={handleFileChange} />
-          </label>
-
-          <TooltipToggle tooltip="Attach file">
-            <Paperclip className="size-4" />
-          </TooltipToggle>
+          <FileUploadComponent
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+          />
 
           <VideoAttachmentDialogue
+            disabled={selectedFiles.length > 0}
             selectedVideos={selectedVideos}
             setSelectedVideos={setSelectedVideos}
           />
@@ -237,6 +244,7 @@ export default function ChatBar({
             <VideoModeToggles
               hidden={selectedVideos.length === 0}
               selectedVideoMode={selectedVideoMode}
+              selectedFiles={selectedFiles}
               setSelectedVideoMode={setSelectedVideoMode}
             />
             {/* Send button with tooltip */}

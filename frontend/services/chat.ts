@@ -6,9 +6,7 @@ export async function fetchAllChats() {
 }
 
 export async function fetchChatMessages(chatId: number) {
-  const response = await axiosClient.get(
-    `/chat/get_messages?chat_id=${chatId}`
-  );
+  const response = await axiosClient.get(`/chat/get_messages?chat_id=${chatId}`);
   return response.data.messages;
 }
 

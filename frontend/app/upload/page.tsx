@@ -147,10 +147,10 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center px-4 w-full">
+    <div className="flex flex-col items-center justify-center px-4 w-full mt-10">
       <h1 className="text-3xl font-bold tracking-tight">My media</h1>
       <p className="text-muted-foreground text-md mb-4">
-        Upload your video files here 
+        Upload your video files here
       </p>
       <UploadDialog />
 

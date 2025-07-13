@@ -8,12 +8,12 @@ import OutputStateCard from "./OutputStateCard";
 
 interface ChatContentProps {
   messages: { type: string; content: string }[];
-  outputState: string;
+  params: Record<string, string>;
 }
 
 export default function ChatContent({
   messages,
-  outputState,
+  params = {},
 }: ChatContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -32,7 +32,9 @@ export default function ChatContent({
               )}
             </div>
           ))}
-          {outputState && <OutputStateCard outputState={outputState} />}
+          {params.status && (
+            <OutputStateCard params={params} />
+          )}
         </div>
       </div>
     </div>

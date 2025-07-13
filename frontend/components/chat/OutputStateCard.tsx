@@ -13,6 +13,7 @@ import {
   ScrollText,
   Waypoints,
   BetweenHorizontalEnd,
+  PictureInPicture,
 } from "lucide-react";
 import { Hourglass, MutatingDots } from "react-loader-spinner";
 
@@ -29,18 +30,24 @@ type StateDescriptions = {
 const stateDescriptions: StateDescriptions = {
   summarizing_history: {
     title: "Summarizing History",
-    description: "Summarizing the history of the chat",
+    description:
+      "Summarizing the past {message_count} messages",
     icon: FileStack,
   },
   selecting_mode: {
     title: "Selecting Mode",
-    description: "Selecting the mode of the chat",
+    description: "Selecting the retrieval mode of the videos",
     icon: MousePointer2,
   },
-  retriving_context: {
-    title: "Retrieving Context",
-    description: "Retrieving the context of the chat",
+  retrieving_context: {
+    title: "Retrieving Video Context",
+    description: "Retrieving the context of the video {video_index} ({video_name})",
     icon: ScrollText,
+  },
+  summarizing_context: {
+    title: "Summarizing Video",
+    description: "Summarizing the context of the video {video_index} ({video_name})",
+    icon: PictureInPicture,
   },
   refining_query: {
     title: "Refining Query",
@@ -49,30 +56,52 @@ const stateDescriptions: StateDescriptions = {
   },
   loading_model: {
     title: "Loading Model",
-    description: "Loading the model for the chat",
+    description: "Loading the {model} model for response generation",
     icon: Waypoints,
   },
 };
 
+// Helper function to format state description with parameters
+// Supports variables like {model}, {video_name}, {message_count}, {video_index}
+// Special handling for video_index to add " from Video X" format
+function formatStateDescription(
+  template: string,
+  params: Record<string, string> = {}
+): string {
+  return template.replace(/\{(\w+)\}/g, (_, key) => {
+    const value = params[key];
+    if (value) {
+      return value.length > 15 ? value.slice(0, 15) + "..." : value;
+    }
+    // Remove the placeholder if no value is provided
+    return "";
+  });
+}
+
 export default function OutputStateCard({
-  outputState,
+  params = {},
 }: {
-  outputState: string;
+  params: Record<string, string>;
 }) {
-  const IconComponent = stateDescriptions[outputState].icon;
+  const IconComponent = stateDescriptions[params.status].icon;
+  const stateDescription = stateDescriptions[params.status];
+
+  const formattedTitle = formatStateDescription(stateDescription.title, params);
+  const formattedDescription = formatStateDescription(
+    stateDescription.description,
+    params
+  );
 
   return (
-    <Card className="w-full max-w-xs border-none shadow-lg">
+    <Card className="w-full max-w-md border border-gray-100 shadow-lg">
       <CardHeader>
         <div className="flex flex-row gap-2 justify-between items-center">
           <div>
-            <CardTitle className="mb-2">
-              <span className="flex items-center gap-2 animate-pulse">
-                {stateDescriptions[outputState].title}
-              </span>
+            <CardTitle className="mb-2 animate-pulse">
+              <span className="flex items-center gap-2">{formattedTitle}</span>
             </CardTitle>
             <CardDescription className="text-xs">
-              {stateDescriptions[outputState].description}
+              {formattedDescription}
             </CardDescription>
           </div>
           {/* <Hourglass
@@ -84,7 +113,7 @@ export default function OutputStateCard({
             wrapperClass=""
             colors={["#888888", "#444444"]}
           /> */}
-          {IconComponent && <IconComponent className="w-15 h-15" />}
+          {IconComponent && <IconComponent className="w-7 h-7 animate-pulse" />}
         </div>
       </CardHeader>
     </Card>

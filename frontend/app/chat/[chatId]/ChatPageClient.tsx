@@ -6,8 +6,6 @@ import ChatContent from "@/components/chat/ChatContent";
 import ChatBar from "@/components/chat/ChatBar";
 import { useChatWebSocket } from "@/hooks/useChatWebSocket";
 import { fetchChatMessages, createNewChat } from "@/services/chat";
-import OutputStateCard from "@/components/chat/OutputStateCard";
-import { Database } from "lucide-react";
 
 const sampleMessage = `# Welcome to ChronoChat! 🚀
 
@@ -151,7 +149,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
-  const [outputState, setOutputState] = useState<string>("");
+  const [outputStateParams, setOutputStateParams] = useState<Record<string, string>>({});
   const pendingMarkdownRef = useRef<string>("");
   const pendingThinkingRef = useRef<string>("");
 
@@ -160,7 +158,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
     if (bottomAnchorRef.current) {
       bottomAnchorRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, outputState]); // re-run on messages change
+  }, [messages, outputStateParams]); // re-run on messages change
 
   // Prioritize loading messages first (only for existing chats)
   useEffect(() => {
@@ -214,7 +212,14 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
       pendingMarkdownRef.current = "";
       pendingThinkingRef.current = "";
       const newMessages = [...prev, { type: "text", content: message }];
-      sendMessage(chatId, message, thinkingEnabled, model, videoNames, videoMode);
+      sendMessage(
+        chatId,
+        message,
+        thinkingEnabled,
+        model,
+        videoNames,
+        videoMode
+      );
       return newMessages;
     });
   };
@@ -223,7 +228,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
   const handleWebSocketMessage = (data: any) => {
     console.log("Received WebSocket message:", data);
 
-    setOutputState(data?.status || "");
+    setOutputStateParams(data.status ? data : {});
 
     if (data.type === "thinking") {
       // Handle thinking content
@@ -285,8 +290,23 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto">
-        <ChatContent messages={messages} outputState={outputState} />
+      <div className="flex-1 overflow-y-auto flex flex-col">
+        {messages.length > 0 ? (
+          <ChatContent
+            messages={messages}
+            params={outputStateParams}
+          />
+        ) : (
+          !isLoadingMessages && (
+          <div className="flex-1 flex flex-col text-left items-center justify-center gap-2">
+            <h1 className="text-4xl font-semibold text-indigo-950 bg-indigo-300 p-1">Hi there!</h1>
+            <p className="text-md text-gray-500">
+              Send a message to start the chat.{" "}
+              <span className="animate-pulse">↓</span>
+            </p>
+          </div>
+          )
+        )}
       </div>
       <div ref={bottomAnchorRef} />
       <ChatBar

@@ -27,6 +27,10 @@ class ContextExtractor:
 
         self.cross_encoder = CrossEncoder("BAAI/bge-reranker-base")
 
+    def refresh_chroma_client(self):
+        """Refresh the ChromaDB client to ensure it sees newly added embeddings."""
+        self.chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
+
     def _get_query_embedding(self, question: str, collection_name: str) -> List[float]:
         if collection_name == "frames":
             return self.clip_embedder.embed_query(question)
@@ -55,36 +59,52 @@ class ContextExtractor:
 
         return results
         
-    def _get_all_context(self, video_filename: str, collection_name: str) -> Dict[str, Any]:
+    def _get_all_context(self, config: Dict[str, Any], video_filename: str, video_metadata: Dict[str, Any], collection_name: str) -> Dict[str, Any]:
         collection = self.chroma_client.get_collection(collection_name)
+        where = {"video_filename": video_filename}
+
+        if config["timestamp_range"]:
+            start_sec, end_sec = config["timestamp_range"]
+            where = {
+                "$and": [
+                    {"video_filename": video_filename},
+                    {
+                        "$or": [  # type: ignore
+                            {"$and": [{"ts_start": {"$gte": max(0, start_sec - 30)}}, {"ts_start": {"$lte": min(end_sec + 30, video_metadata["duration"])}}]},
+                            {"$and": [{"ts_end": {"$gte": max(0, start_sec - 30)}}, {"ts_end": {"$lte": min(end_sec + 30, video_metadata["duration"])}}]},
+                        ]
+                    }
+                ]
+            }
+
         results = collection.get(
-            where={"video_filename": video_filename},
+            where=where,
             include=["metadatas", "embeddings"]
         )
-        return results
-    
-    def _get_selected_time_context(self, config: Dict[str, Any], video_filename: str, video_metadata: Dict[str, Any], collection_name: str) -> Dict[str, Any]:
-        start_sec, end_sec = config["timestamp_range"]
-
-        collection = self.chroma_client.get_collection(collection_name)
-        results = collection.get(
-            where={
-                "video_filename": video_filename,
-                "ts_start": {"$gte": max(0, start_sec - 30), "$lte": min(end_sec + 30, video_metadata["duration"])},
-                "ts_end": {"$gte": max(0, start_sec - 30), "$lte": min(end_sec + 30, video_metadata["duration"])}
-            },
-            include=["metadatas", "embeddings"]
-        )
-
         return results
         
-    def _get_relevant_context(self, question: str, video_filename: str, collection_name: str, n_results: int = 40) -> Dict[str, Any]:
+    def _get_relevant_context(self, config: Dict[str, Any], question: str, video_filename: str, video_metadata: Dict[str, Any], collection_name: str, n_results: int = 40) -> Dict[str, Any]:
         collection = self.chroma_client.get_collection(collection_name)
         query_embedding = self._get_query_embedding(question, collection_name)
+        where = {"video_filename": video_filename}
+
+        if config["timestamp_range"]:
+            start_sec, end_sec = config["timestamp_range"]
+            where = {
+                "$and": [
+                    {"video_filename": video_filename},
+                    {
+                        "$or": [  # type: ignore
+                            {"$and": [{"ts_start": {"$gte": max(0, start_sec - 30)}}, {"ts_start": {"$lte": min(end_sec + 30, video_metadata["duration"])}}]},
+                            {"$and": [{"ts_end": {"$gte": max(0, start_sec - 30)}}, {"ts_end": {"$lte": min(end_sec + 30, video_metadata["duration"])}}]},
+                        ]
+                    }
+                ]
+            }
 
         results = collection.query(
             query_embeddings=[query_embedding],
-            where={"video_filename": video_filename},
+            where=where,
             n_results=n_results,
             include=["metadatas", "embeddings", "distances"]
         )
@@ -147,38 +167,29 @@ class ContextExtractor:
             "embeddings": [results["embeddings"][i] for i in sorted_indices] if len(results["embeddings"]) > 0 else [],
             "distances": [results["distances"][i] for i in sorted_indices] if results["distances"] else []
         }
-
-    def _timepin_context(self, config: Dict[str, Any], question: str, video_filename: str, video_metadata: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        asr_results = self._get_selected_time_context(config, video_filename, video_metadata, self.audio_collection_name)
-        asr_results = self._get_clustered_context(asr_results, n_results=45)
-
-        frame_results = self._get_selected_time_context(config, video_filename, video_metadata, self.video_collection_name)
-        frame_results = self._get_clustered_context(frame_results, n_results=15)
-
-        return asr_results, frame_results   
     
-    def _summary_context(self, config: Dict[str, Any], question: str, video_name: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def _summary_context(self, config: Dict[str, Any], question: str, video_name: str, video_metadata: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         # Get context from both ASR and frame collections
-        asr_results = self._get_all_context(video_name, self.audio_collection_name)
+        asr_results = self._get_all_context(config, video_name, video_metadata, self.audio_collection_name)
         asr_results = self._get_clustered_context(asr_results, n_results=45)
 
-        frame_results = self._get_all_context(video_name, self.video_collection_name)
+        frame_results = self._get_all_context(config, video_name, video_metadata, self.video_collection_name)
         frame_results = self._get_clustered_context(frame_results, n_results=15)
                 
         return asr_results, frame_results
     
-    def _timestamp_context(self, config: Dict[str, Any], question: str, video_name: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        asr_results, frame_results = self._summary_context(config, question, video_name)
+    def _timestamp_context(self, config: Dict[str, Any], question: str, video_name: str, video_metadata: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        asr_results, frame_results = self._summary_context(config, question, video_name, video_metadata)
         asr_results["metadatas"] = sorted(asr_results["metadatas"], key=lambda x: x["ts_start"])
         frame_results["metadatas"] = sorted(frame_results["metadatas"], key=lambda x: x["ts_start"])
         return asr_results, frame_results
             
-    def _query_context(self, config: Dict[str, Any], question: str, video_name: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        frame_results = self._get_relevant_context(question, video_name, self.video_collection_name, n_results=100)
+    def _query_context(self, config: Dict[str, Any], question: str, video_name: str, video_metadata: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        frame_results = self._get_relevant_context(config, question, video_name, video_metadata, self.video_collection_name, n_results=100)
         # frame_results = self._mmr(frame_results, question, self.video_collection_name, n_results=50)
         frame_results = self._rerank_with_bge(frame_results, question, n_results=45)
 
-        asr_results = self._get_relevant_context(question, video_name, self.audio_collection_name, n_results=100)
+        asr_results = self._get_relevant_context(config, question, video_name, video_metadata, self.audio_collection_name, n_results=100)
         # asr_results = self._mmr(asr_results, question, self.audio_collection_name, n_results=50)
         asr_results = self._rerank_with_bge(asr_results, question, n_results=15)
 
@@ -239,11 +250,11 @@ class ContextExtractor:
             frame_results = {"metadatas": []}
             
             if config["mode"] == "summary":
-                asr_results, frame_results = self._summary_context(config, question, video_name)
+                asr_results, frame_results = self._summary_context(config, question, video_name, video_metadata)
             elif config["mode"] == "timestamps":
-                asr_results, frame_results = self._timestamp_context(config, question, video_name)
+                asr_results, frame_results = self._timestamp_context(config, question, video_name, video_metadata)
             elif config["mode"] == "query":
-                asr_results, frame_results = self._query_context(config, question, video_name)
+                asr_results, frame_results = self._query_context(config, question, video_name, video_metadata)
 
             # Add video metadata if available
             if video_metadata:
