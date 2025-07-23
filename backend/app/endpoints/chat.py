@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, File, UploadFile
 import asyncio
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Dict, Any
+from typing import Dict, Any, List
 import json
+import os
 
 # from inference.pipeline import VideoRAGPipeline
 from app.worker import name_chat
@@ -74,6 +75,7 @@ async def websocket_chat(websocket: WebSocket):
             video_names = request_data.get("video_names", [])
             model = request_data.get("model")
             video_mode = request_data.get("video_mode", "")
+            files = request_data.get("files", [])
 
             if not chat_id or not message:
                 error_data = {"chat_id": chat_id, "type": "error", "content": "Invalid request data: missing chat_id or messages"}
@@ -86,7 +88,10 @@ async def websocket_chat(websocket: WebSocket):
                 asyncio.create_task(name_chat(chat_id, message))
             
             # Get the generator from video_rag.ask() and iterate through it
-            response_generator = video_rag.ask(message, video_names, chat_id, model, think, video_mode, send_client=send_client)
+            if files:
+                response_generator = await video_rag.ask_with_files(message, files, chat_id, model, think, send_client=send_client)
+            else:
+                response_generator = await video_rag.ask(message, video_names, chat_id, model, think, video_mode, send_client=send_client)
             
             async for response_data in response_generator:
                 await send_client(**response_data)
@@ -201,3 +206,9 @@ async def update_chat_name(chat_id: int, new_name: str):
     """Update the name of a chat session."""
     video_rag.chat_history.update_chat_name(chat_id, new_name)
     return {"message": "Chat name updated successfully"}
+
+@router.post("/upload_file")
+async def upload_file(file: UploadFile = File(...)):
+    """Upload a file to the server."""
+    await video_rag.save_file(file)
+    return {"message": "File uploaded successfully"}

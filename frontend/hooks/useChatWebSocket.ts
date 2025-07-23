@@ -1,4 +1,5 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+import { uploadFile } from "@/services/chat";
+import { useRef, useEffect, useState } from "react";
 
 export function useChatWebSocket(
   onMessage: (data: any) => void,
@@ -84,15 +85,21 @@ export function useChatWebSocket(
     };
   }, [shouldConnect]); // Re-run when shouldConnect changes
 
-  const sendMessage = (
+  const sendMessage = async (
     chatId: number,
     message: any,
     think: boolean,
     model: string,
     videoNames: string[],
-    videoMode: string
+    videoMode: string,
+    files: File[]
   ) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
+      const fileNames = await Promise.all(files.map(async (file) => {
+        await uploadFile(file);
+        return file.name;
+      }));
+
       ws.current?.send(
         JSON.stringify({
           message: message,
@@ -101,6 +108,7 @@ export function useChatWebSocket(
           think: think,
           model: model,
           video_mode: videoMode,
+          files: fileNames,
         })
       );
       console.log("Message sent:", message);

@@ -111,7 +111,7 @@ export function ModelComboBox({
                 >
                   {model.name}
                   <span className="text-xs text-gray-500">
-                    {(model.size / (1024 ** 3)).toFixed(2)}GB
+                    {(model.size / (1000 ** 3)).toFixed(2)}GB
                   </span>
                   <Check
                     className={cn(

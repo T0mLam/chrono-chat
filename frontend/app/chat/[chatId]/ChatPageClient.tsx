@@ -201,27 +201,30 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
   };
 
   // When user sends a message
-  const onSend = (
+  const onSend = async (
     message: string,
     thinkingEnabled: boolean,
     model: string,
     videoNames: string[],
-    videoMode: string
+    videoMode: string,
+    files: File[]
   ) => {
     setMessages((prev) => {
       pendingMarkdownRef.current = "";
       pendingThinkingRef.current = "";
-      const newMessages = [...prev, { type: "text", content: message }];
-      sendMessage(
-        chatId,
-        message,
-        thinkingEnabled,
-        model,
-        videoNames,
-        videoMode
-      );
-      return newMessages;
+      return [...prev, { type: "text", content: message }];
     });
+
+    // Send message after updating UI
+    await sendMessage(
+      chatId,
+      message,
+      thinkingEnabled,
+      model,
+      videoNames,
+      videoMode,
+      files
+    );
   };
 
   // Use the custom WebSocket hook to handle chat messages
@@ -292,26 +295,24 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto flex flex-col">
         {messages.length > 0 ? (
-          <ChatContent
-            messages={messages}
-            params={outputStateParams}
-          />
+          <ChatContent messages={messages} params={outputStateParams} />
         ) : (
           !isLoadingMessages && (
-          <div className="flex-1 flex flex-col text-left items-center justify-center gap-2">
-            <h1 className="text-4xl font-semibold text-indigo-950 bg-indigo-300 p-1">Hi there!</h1>
-            <p className="text-md text-gray-500">
-              Send a message to start the chat.{" "}
-              <span className="animate-pulse">↓</span>
-            </p>
-          </div>
+            <div className="flex-1 flex flex-col text-left items-center justify-center gap-2">
+              <h1 className="text-3xl font-semibold text-indigo-950 bg-indigo-300 p-1">
+                Hi there!
+              </h1>
+              <p className="text-sm text-gray-500">
+                Send a message to start the chat.{" "}
+                <span className="animate-pulse">↓</span>
+              </p>
+            </div>
           )
         )}
       </div>
       <div ref={bottomAnchorRef} />
       <ChatBar
         onSend={onSend}
-        onAttachFile={handleAttachFile}
         canSend={canSend && !isConnecting}
       />
     </div>

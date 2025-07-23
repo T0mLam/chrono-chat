@@ -4,12 +4,17 @@ import json
 import jsonschema
 from typing import List, Dict, Any, Optional, Callable
 from string import Template
+from fastapi import UploadFile
+import asyncio
+from pathlib import Path
+import fitz  
 
 from inference.llm_client import OllamaClient
 from inference.context_extractor import ContextExtractor
 from inference.chat_history import ChatHistory
 
 PROMPT_DIR = "./inference/prompts"
+FILE_DIR = "./data/files"
 
 class VideoRAG:
     _instance = None
@@ -36,12 +41,6 @@ class VideoRAG:
             "query": self._load_text_prompts("query.txt"),
             "ignore": self._load_text_prompts("ignore.txt")
         }
-
-        # Initialize easyocr
-        # self.easyocr_reader = easyocr.Reader(
-        #     lang_list=["en"], 
-        #     gpu=torch.cuda.is_available()  
-        # )
 
         self._initialized = True
 
@@ -103,7 +102,7 @@ class VideoRAG:
         jsonschema.validate(config, router_schema)
         return config
     
-    async def ask_multi_video(self, messages: List[Dict[str, Any]], config: Dict[str, Any], refined_question: str, video_names: List[str], video_metadatas: List[str], send_client: Callable = lambda **kwargs: None):
+    async def _ask_multi_video(self, messages: List[Dict[str, Any]], config: Dict[str, Any], refined_question: str, video_names: List[str], video_metadatas: List[str], send_client: Callable = lambda **kwargs: None):
         video_summaries = []
 
         for i, video_name in enumerate(video_names):    
@@ -129,7 +128,7 @@ class VideoRAG:
 
         return messages
     
-    async def ask_single_video(self, messages: List[Dict[str, Any]], config: Dict[str, Any], refined_question: str, video_names: List[str], send_client: Callable = lambda **kwargs: None):
+    async def _ask_single_video(self, messages: List[Dict[str, Any]], config: Dict[str, Any], refined_question: str, video_names: List[str], send_client: Callable = lambda **kwargs: None):
         await send_client(status="retrieving_context", video_name=video_names[0])
         # Get formatted context from ContextExtractor
         context = self.context_extractor.format_context(config, refined_question, video_names)
@@ -142,6 +141,32 @@ class VideoRAG:
         ]
 
         return messages
+    
+    async def _generate_response(self, messages: List[Dict[str, Any]], chat_id: int, model: str, think: bool, send_client: Callable = lambda **kwargs: None):        
+        await send_client(status="loading_model", model=model)
+
+        # Get streaming response from LLM
+        full_response = ""
+        full_thinking = ""
+        async for chunk in await self.ollama_client.answer(messages, think=think, stream=True, model=model): # type: ignore
+            content = chunk.get("message", {}).get("content", "")
+            think_content = chunk.get("message", {}).get("thinking", "")
+            done = chunk.get("done", False)
+            
+            if think_content:
+                response_data = {"chat_id": chat_id, "type": "thinking", "content": think_content, "done": done}
+                full_thinking += think_content
+            else:
+                response_data = {"chat_id": chat_id, "type": "markdown", "content": content, "done": done}
+                full_response += content
+
+            yield response_data
+
+        # Store complete messages only after streaming is finished
+        if full_thinking:
+            self.chat_history.add_message(chat_id, "thinking", full_thinking)
+        if full_response:
+            self.chat_history.add_message(chat_id, "assistant", full_response)
     
     async def ask(self, question: str, video_names: List[str], chat_id: int, model: str, think: bool, video_mode: str, send_client: Callable = lambda **kwargs: None):
         # Use planner LLM with loaded prompt
@@ -182,9 +207,9 @@ class VideoRAG:
                 refined_question = await self.ollama_client.refine_question(question, summary)
 
             if multi_video:
-                messages = await self.ask_multi_video(messages, config, refined_question, video_names, video_metadatas, send_client)
+                messages = await self._ask_multi_video(messages, config, refined_question, video_names, video_metadatas, send_client)
             else:
-                messages = await self.ask_single_video(messages, config, refined_question, video_names, send_client)
+                messages = await self._ask_single_video(messages, config, refined_question, video_names, send_client)
         else:
             messages = [
                 {"role": "system", "content": "You are a helpful assistant that can answer questions."},
@@ -193,31 +218,54 @@ class VideoRAG:
             ]
 
         self.chat_history.add_message(chat_id, "user", question)
-        
-        await send_client(status="loading_model", model=model)
+        return self._generate_response(messages, chat_id, model, think, send_client=send_client)
 
-        # Get streaming response from LLM
-        full_response = ""
-        full_thinking = ""
-        async for chunk in await self.ollama_client.answer(messages, think=think, stream=True, model=model): # type: ignore
-            content = chunk.get("message", {}).get("content", "")
-            think_content = chunk.get("message", {}).get("thinking", "")
-            done = chunk.get("done", False)
-            
-            if think_content:
-                response_data = {"chat_id": chat_id, "type": "thinking", "content": think_content, "done": done}
-                full_thinking += think_content
-            else:
-                response_data = {"chat_id": chat_id, "type": "markdown", "content": content, "done": done}
-                full_response += content
+    async def ask_with_files(self, question: str, files: List[str], chat_id: int, model: str, think: bool, send_client: Callable = lambda **kwargs: None):
+        # Get chat history and add new question
+        previous_messages = self.chat_history.get_messages_for_llm(chat_id, 10)
 
-            yield response_data
+        # Wait for all files to be saved
+        while not all(os.path.exists(os.path.join(FILE_DIR, file)) for file in files):
+            await asyncio.sleep(0.25)
 
-        # Store complete messages only after streaming is finished
-        if full_thinking:
-            self.chat_history.add_message(chat_id, "thinking", full_thinking)
-        if full_response:
-            self.chat_history.add_message(chat_id, "assistant", full_response)
+        # Get file contents, now just assume they are images
+        file_paths = [os.path.abspath(os.path.join(FILE_DIR, file)) for file in files]
+        pdf_file_paths = [file_path for file_path in file_paths if file_path.lower().endswith(".pdf")]
+        image_file_paths = [file_path for file_path in file_paths if file_path not in pdf_file_paths]
+
+        await send_client(status="processing_pdfs", file_count=len(pdf_file_paths))
+
+        content = ""
+
+        for file_path in pdf_file_paths:
+            content += "\n\n" + f"=== PDF ({Path(file_path).stem}) ===\n"
+            with fitz.open(file_path) as doc:
+                for page in doc:
+                    content += page.get_text()
+            content += "\n\n"
+
+        content += f"=== Question ===\n" + question
+
+        print(f"Content: {content}")
+
+        # Add images to the messages
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant that can answer questions."},
+            *previous_messages,
+            {"role": "user", "content": content, "images": image_file_paths}
+        ]
+
+        self.chat_history.add_message(chat_id, "user", question)
+        return self._generate_response(messages, chat_id, model, think, send_client=send_client)
+
+    async def save_file(self, file: UploadFile):
+        # Ensure the directory exists
+        os.makedirs(FILE_DIR, exist_ok=True)
+        file_path = os.path.join(FILE_DIR, file.filename)
+        print(f"Saving file to: {os.path.abspath(file_path)}")
+        if not os.path.exists(file_path):
+            with open(file_path, "wb") as f:
+                f.write(await file.read())
 
 if __name__ == "__main__":
     videorag = VideoRAG()

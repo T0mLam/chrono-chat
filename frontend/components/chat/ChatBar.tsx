@@ -33,8 +33,9 @@ interface ChatBarProps {
     thinkingEnabled: boolean,
     model: string,
     videoNames: string[],
-    videoMode: string
-  ) => void;
+    videoMode: string,
+    files: File[]
+  ) => Promise<void>;
   onAttachFile?: (file: File) => void;
   canSend: boolean;
 }
@@ -156,7 +157,6 @@ export function VideoModeToggles({
 
 export default function ChatBar({
   onSend,
-  onAttachFile,
   canSend,
 }: ChatBarProps) {
   const [isThinkingEnabled, setIsThinkingEnabled] = useState(false);
@@ -165,15 +165,22 @@ export default function ChatBar({
   const [selectedVideoMode, setSelectedVideoMode] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const input = form.querySelector("textarea") as HTMLTextAreaElement;
     const message = input.value.trim();
 
     if (message) {
-      onSend(message, isThinkingEnabled, selectedModel, selectedVideos, selectedVideoMode);
       input.value = "";
+      await onSend(
+        message,
+        isThinkingEnabled,
+        selectedModel,
+        selectedVideos,
+        selectedVideoMode,
+        selectedFiles
+      );
     }
   };
 
@@ -184,7 +191,7 @@ export default function ChatBar({
     }
   };
 
-  const handleKeyDownForSubmit = (
+  const handleKeyDownForSubmit = async (
     e: React.KeyboardEvent<HTMLTextAreaElement>
   ) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -192,8 +199,15 @@ export default function ChatBar({
       const textarea = e.currentTarget;
       const message = textarea.value.trim();
       if (message) {
-        onSend(message, isThinkingEnabled, selectedModel, selectedVideos, selectedVideoMode);
         textarea.value = "";
+        await onSend(
+          message,
+          isThinkingEnabled,
+          selectedModel,
+          selectedVideos,
+          selectedVideoMode,
+          selectedFiles
+        );        
       }
     }
   };

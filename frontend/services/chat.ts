@@ -6,7 +6,9 @@ export async function fetchAllChats() {
 }
 
 export async function fetchChatMessages(chatId: number) {
-  const response = await axiosClient.get(`/chat/get_messages?chat_id=${chatId}`);
+  const response = await axiosClient.get(
+    `/chat/get_messages?chat_id=${chatId}`
+  );
   return response.data.messages;
 }
 
@@ -31,5 +33,17 @@ export async function updateChatName(chatId: number, newName: string) {
       newName
     )}`
   );
+  return response.data;
+}
+
+export async function uploadFile(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await axiosClient.post(`/chat/upload_file`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data;
 }

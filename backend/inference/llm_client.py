@@ -1,4 +1,4 @@
-from ollama import Client, AsyncClient
+from ollama import AsyncClient
 from typing import List, Dict, Any
 import re
 

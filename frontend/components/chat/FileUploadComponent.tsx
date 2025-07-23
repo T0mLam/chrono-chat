@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Paperclip } from "lucide-react";
 import { useRef } from "react";
+import { FileUploadDataTable } from "./FileUploadDataTable";
 
 export function FileUploadComponent({
   selectedFiles,
@@ -26,7 +27,7 @@ export function FileUploadComponent({
 
     if (files) {
       const newFiles = Array.from(files);
-      setSelectedFiles([...selectedFiles, ...newFiles]);
+      setSelectedFiles([...selectedFiles, ...newFiles].slice(0, 3));
     }
   };
 
@@ -34,15 +35,18 @@ export function FileUploadComponent({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="ml-2">
+          <div className="ml-2 relative">
             <Toggle onClick={handleToggleClick} pressed={false}>
               <Paperclip className="size-4" />
+              <span className="text-xs absolute bottom-0 -right-[5px] rounded-full px-2 py-1">
+                {selectedFiles.length > 0 ? selectedFiles.length : ""}
+              </span>
             </Toggle>
             <input
               ref={fileInputRef}
               type="file"
               multiple
-              max={3 - selectedFiles.length}
+              max={3}
               onChange={handleFileSelect}
               className="hidden"
               accept="image/*,.pdf"
@@ -50,18 +54,23 @@ export function FileUploadComponent({
           </div>
         </TooltipTrigger>
         <TooltipContent
-          className="bg-white text-black border border-gray-200"
-          arrowClassName="bg-white fill-white border-b border-r border-gray-200"
+          className="bg-white text-black border border-gray-300 max-w-2xl flex flex-col gap-3 p-2"
+          arrowClassName="bg-white fill-white border-b border-r border-gray-300"
         >
           <div className="flex flex-col">
             <div className="text-sm font-semibold">Attach files</div>
             <div className="text-xs text-gray-500">
-              You can attach up to 3 files
+              You can attach up to{" "}
+              <span className="font-semibold text-black">3</span> files
             </div>
             <div className="text-xs text-gray-500">
-              Supported formats: Images, PDFs
+              Supported formats: PDFs, Images (for VLLMs only)
             </div>
           </div>
+          <FileUploadDataTable
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+          />
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

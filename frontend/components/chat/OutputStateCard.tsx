@@ -14,6 +14,7 @@ import {
   Waypoints,
   BetweenHorizontalEnd,
   PictureInPicture,
+  FileText,
 } from "lucide-react";
 import { Hourglass, MutatingDots } from "react-loader-spinner";
 
@@ -58,6 +59,11 @@ const stateDescriptions: StateDescriptions = {
     title: "Loading Model",
     description: "Loading the {model} model for response generation",
     icon: Waypoints,
+  },
+  processing_pdfs: {
+    title: "Processing PDFs",
+    description: "Extracting text and images from {file_count} PDFs",
+    icon: FileText,
   },
 };
 
@@ -104,15 +110,6 @@ export default function OutputStateCard({
               {formattedDescription}
             </CardDescription>
           </div>
-          {/* <Hourglass
-            visible={true}
-            height="30"
-            width="30"
-            ariaLabel="hourglass-loading"
-            wrapperStyle={{}}
-            wrapperClass=""
-            colors={["#888888", "#444444"]}
-          /> */}
           {IconComponent && <IconComponent className="w-7 h-7 animate-pulse" />}
         </div>
       </CardHeader>
