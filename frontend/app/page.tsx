@@ -1,6 +1,11 @@
 import { WelcomeBanner } from "@/components/about/WelcomeBanner";
 import { FAQAccordion } from "@/components/about/FAQAccordion";
 import { SocialLinks } from "@/components/about/SocialLinks";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Home - ChronoChat",
+};
 
 export default function Home() {
   const faqItems = [

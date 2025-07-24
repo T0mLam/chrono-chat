@@ -61,6 +61,7 @@ import { deleteChat, fetchAllChats, updateChatName } from "@/services/chat";
 import { Input } from "../ui/input";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
+import Image from "next/image";
 
 const items = [
   {
@@ -160,11 +161,24 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5 mb-1"
+              className="data-[slot=sidebar-menu-button]:!p-1 mb-1 h-8"
             >
-              <Link href="/">
-                <CircleArrowDown className="!size-5" />
-                <span className="text-base font-semibold">ChronoChat.</span>
+              <Link
+                href="https://github.com/T0mLam/chrono-chat"
+                className="flex items-center gap-2"
+              >
+                <div className="flex-shrink-0">
+                  <Image
+                    src="/favicon.png"
+                    alt="ChronoChat"
+                    width={32}
+                    height={32}
+                    className="w-6 h-6"
+                  />
+                </div>
+                <span className="text-base font-semibold truncate">
+                  ChronoChat.
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

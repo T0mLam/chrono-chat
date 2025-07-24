@@ -12,6 +12,7 @@ import fitz
 from inference.llm_client import OllamaClient
 from inference.context_extractor import ContextExtractor
 from inference.chat_history import ChatHistory
+from utils.sanitize_filename import sanitize_filename
 
 PROMPT_DIR = "./inference/prompts"
 FILE_DIR = "./data/files"
@@ -224,6 +225,8 @@ class VideoRAG:
         # Get chat history and add new question
         previous_messages = self.chat_history.get_messages_for_llm(chat_id, 10)
 
+        files = [sanitize_filename(file) for file in files]
+
         # Wait for all files to be saved
         while not all(os.path.exists(os.path.join(FILE_DIR, file)) for file in files):
             await asyncio.sleep(0.25)
@@ -261,8 +264,11 @@ class VideoRAG:
     async def save_file(self, file: UploadFile):
         # Ensure the directory exists
         os.makedirs(FILE_DIR, exist_ok=True)
-        file_path = os.path.join(FILE_DIR, file.filename)
-        print(f"Saving file to: {os.path.abspath(file_path)}")
+        
+        # Quick sanitize: replace invalid chars with underscore
+        safe_filename = sanitize_filename(file.filename)
+        file_path = os.path.join(FILE_DIR, safe_filename)
+        
         if not os.path.exists(file_path):
             with open(file_path, "wb") as f:
                 f.write(await file.read())

@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { DataTable } from "@/components/ui/chat/data-table";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
+import { FilePreviewDialog } from "./FilePreviewDialog";
 
 type FileDetails = {
   name: string;
@@ -26,6 +27,8 @@ export function FileUploadDataTable({
   setSelectedFiles: (files: File[]) => void;
 }) {
   const [data, setData] = useState<FileDetails[]>([]);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const columns: ColumnDef<FileDetails>[] = [
     {
@@ -47,7 +50,31 @@ export function FileUploadDataTable({
       accessorKey: "type",
     },
     {
-      id: "actions",
+      id: "preview",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const file = row.original;
+        const originalFile = selectedFiles.find((f) => f.name === file.name);
+        return (
+          <Button
+            variant="ghost"
+            className="h-6 w-6"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (originalFile) {
+                setPreviewFile(originalFile);
+                setIsPreviewOpen(true);
+              }
+            }}
+          >
+            <Eye className="h-3 w-3" />
+          </Button>
+        );
+      },
+    },
+    {
+      id: "delete",
       enableHiding: false,
       cell: ({ row }) => {
         const file = row.original;
@@ -83,8 +110,17 @@ export function FileUploadDataTable({
   }, [selectedFiles]);
 
   return (
-    <div className={cn("container mx-auto", data.length === 0 && "hidden")}>
-      <DataTable columns={columns} data={data} />
-    </div>
+    <>
+      <div className={cn("container mx-auto", data.length === 0 && "hidden")}>
+        <DataTable columns={columns} data={data} />
+      </div>
+      {previewFile && (
+        <FilePreviewDialog
+          file={previewFile}
+          isOpen={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+        />
+      )}
+    </>
   );
 }

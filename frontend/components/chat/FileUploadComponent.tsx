@@ -64,7 +64,7 @@ export function FileUploadComponent({
               <span className="font-semibold text-black">3</span> files
             </div>
             <div className="text-xs text-gray-500">
-              Supported formats: PDFs, Images (for VLLMs only)
+              Supported formats: PDFs (text extraction), Images (for VLMs only)
             </div>
           </div>
           <FileUploadDataTable
