@@ -19,7 +19,7 @@ export function FilePreviewDialog({
 }) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-4xl h-[80vh] flex flex-col">
+      <DialogContent className="w-full max-w-4xl max-h-[80vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="block truncate">{file.name}</DialogTitle>
           <DialogDescription className="block truncate">
@@ -27,7 +27,7 @@ export function FilePreviewDialog({
             {formatBytes(file.size)}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 flex items-center justify-center min-h-0 overflow-hidden">
+        <div className="flex-1 flex items-center justify-center overflow-hidden">
           {file.type.startsWith("image/") ? (
             <img
               src={URL.createObjectURL(file)}
@@ -41,7 +41,7 @@ export function FilePreviewDialog({
             <iframe
               src={URL.createObjectURL(file)}
               title={file.name}
-              className="w-full h-full border-0"
+              className="w-full h-[50vh] border-0"
               onLoad={(e) =>
                 URL.revokeObjectURL((e.target as HTMLIFrameElement).src)
               }

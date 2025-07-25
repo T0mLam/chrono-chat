@@ -22,41 +22,24 @@ import {
 import axiosClient from "@/lib/axiosClient";
 import { useEffect, useState } from "react";
 
-const frameworks = [
-  {
-    value: "next.js",
-    label: "Next.js",
-  },
-  {
-    value: "sveltekit",
-    label: "SvelteKit",
-  },
-  {
-    value: "nuxt.js",
-    label: "Nuxt.js",
-  },
-  {
-    value: "remix",
-    label: "Remix",
-  },
-  {
-    value: "astro",
-    label: "Astro",
-  },
-];
-
 interface Model {
   name: string;
   size: number;
 }
 
 interface ModelComboBoxProps {
+  className?: string;
+  storageKey?: string;
+  onModelChange?: (model: string) => void;
   selectedModel: string;
   setSelectedModel: (model: string) => void;
 }
 
 export function ModelComboBox({
+  className,
+  storageKey = "selectedModel",
   selectedModel,
+  onModelChange,
   setSelectedModel,
 }: ModelComboBoxProps) {
   const [open, setOpen] = useState<boolean>(false);
@@ -68,15 +51,21 @@ export function ModelComboBox({
       setModels(res.data.models);
     });
 
-    const storedModel = localStorage.getItem("selectedModel");
+    const storedModel = localStorage.getItem(storageKey);
     if (storedModel) {
       setSelectedModel(storedModel);
     }
   }, []);
 
+  useEffect(() => {
+    if (onModelChange) {
+      onModelChange(selectedModel);
+    }
+  }, [selectedModel, onModelChange]);
+
   const setAndStoreSelectedModel = (model: string) => {
     setSelectedModel(model);
-    localStorage.setItem("selectedModel", model);
+    localStorage.setItem(storageKey, model);
   };
 
   return (
@@ -86,7 +75,10 @@ export function ModelComboBox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[200px] justify-between mx-2 border-none shadow-none bg-gray-50 hover:bg-gray-200"
+          className={cn(
+            "w-[200px] justify-between mx-2 border-none shadow-none bg-gray-50 hover:bg-gray-200",
+            className
+          )}
         >
           {selectedModel
             ? models.find((model) => model.name === selectedModel)?.name
@@ -111,7 +103,7 @@ export function ModelComboBox({
                 >
                   {model.name}
                   <span className="text-xs text-gray-500">
-                    {(model.size / (1000 ** 3)).toFixed(2)}GB
+                    {(model.size / 1000 ** 3).toFixed(2)}GB
                   </span>
                   <Check
                     className={cn(

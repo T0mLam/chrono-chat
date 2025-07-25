@@ -62,6 +62,8 @@ import { Input } from "../ui/input";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
 import Image from "next/image";
+import { SettingDialog } from "./SettingDialog";
+import { Searchbox } from "./Searchbox";
 
 const items = [
   {
@@ -74,16 +76,16 @@ const items = [
     url: "/upload",
     icon: Library,
   },
-  {
-    title: "Search",
-    url: "#",
-    icon: Search,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
-  },
+  // {
+  //   title: "Search",
+  //   url: "#",
+  //   icon: Search,
+  // },
+  // {
+  //   title: "Settings",
+  //   url: "#",
+  //   icon: Settings,
+  // },
 ];
 
 const support = {
@@ -103,6 +105,7 @@ export function AppSidebar() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [editingChatId, setEditingChatId] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
   const { toggleSidebar, open, isMobile } = useSidebar();
 
@@ -192,6 +195,16 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+          <SidebarMenuItem key="search">
+            <SidebarMenuButton asChild tooltip="Search">
+              <button type="button" onClick={() => setSearchOpen(true)} className="cursor-pointer">
+                <Search />
+                <span>Search</span>
+              </button>
+            </SidebarMenuButton>
+            </SidebarMenuItem>
+          <Searchbox open={searchOpen} setOpen={setSearchOpen} /> 
+          <SettingDialog />
         </SidebarMenu>
       </SidebarHeader>
 

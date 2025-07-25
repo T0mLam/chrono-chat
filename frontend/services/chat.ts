@@ -47,3 +47,10 @@ export async function uploadFile(file: File) {
   });
   return response.data;
 }
+
+export async function updatePlannerModel(model_name: string) {
+  const response = await axiosClient.post(
+    `/chat/update_planner_model?model_name=${encodeURIComponent(model_name)}`
+  );
+  return response.data;
+}

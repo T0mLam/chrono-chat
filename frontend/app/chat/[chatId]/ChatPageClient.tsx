@@ -5,136 +5,7 @@ import { useRouter } from "next/navigation";
 import ChatContent from "@/components/chat/ChatContent";
 import ChatBar from "@/components/chat/ChatBar";
 import { useChatWebSocket } from "@/hooks/useChatWebSocket";
-import { fetchChatMessages, createNewChat } from "@/services/chat";
-
-const sampleMessage = `# Welcome to ChronoChat! 🚀
-
-  ## Features Overview
-  
-  ### Math Support
-  Inline math: $E = mc^2$
-  Block math:
-  $$
-  \\frac{d}{dx}(x^n) = nx^{n-1}
-  $$
-  
-  ### Tables
-  | Feature | Description | Status |
-  |---------|-------------|--------|
-  | Markdown | Rich text formatting | ✅ |
-  | Tables | Data organization | ✅ |
-  | Math | LaTeX equations | ✅ |
-  
-  ### Lists
-  - **Unordered list**
-    - Nested item 1
-    - Nested item 2
-  1. **Ordered list**
-     1. First item
-     2. Second item
-  
-  ### Code
-  \`\`\`python
-  def hello_world():
-      print("Hello from ChronoChat! "Hello from ChronoChat! "Hello from ChronoChat! "Hello from ChronoChat!")
-  \`\`\`
-  
-  ### Links & Images
-  [Visit our documentation](https://docs.example.com)
-  
-  ---
-  *Enjoy your chat experience!*`;
-
-const sampleMessage2 = `\begin{problem}
-What is the minimum number of steps to reach the top-right corner (0,0) from (0,0) in a grid, where each step can       
-be right or up?  
-\end{problem}
-
-The 2D dynamic programming solution is as follows:
-
-$$
-\begin{array}{|c|c|}
-\hline
-i & j \\
-\hline
-0 & 0 \\
-\hline
-1 & 0 \\
-\hline
-2 & 0 \\
-\hline
-\end{array}
-$$
-
-$$
-\begin{array}{c|c}
-i & j \\
-\hline
-0 & 0 \\
-\hline
-1 & 0 \\
-\hline
-2 & 0 \\
-\hline
-\end{array}
-$$
-
-$$
-\begin{array}{l}
-dp[i][j] = \min(dp[i-1][j], dp[i][j-1]) + 1 \\
-\hline
-\end{array}
-$$
-
-$$
-\boxed{dp[2][0]} = 2
-$$
-
-$$
-\begin{matrix}
-i & j \\
-0 & 0 \\
-1 & 0 \\
-2 & 0
-\end{matrix}
-$$
-
-$$
-dp[i][j] = \min(dp[i-1][j], dp[i][j-1]) + 1
-$$
-
-$$
-\begin{array}{c|c}
-a & b \\ \hline
-c & d
-\end{array}
-$$
-
-$$
-\boxed{dp[2][0]} = 2
-$$
-
-This problem is a classic 2D dynamic programming problem, where each cell's value depends on the minimum number of      
-steps required to reach it.`;
-
-const initialMessages = [
-  { type: "text", content: "Welcome to chat " },
-  { type: "markdown", content: sampleMessage },
-  { type: "text", content: "Welcome to chat " },
-  { type: "markdown", content: sampleMessage },
-  { type: "text", content: "Welcome to chat " },
-  { type: "markdown", content: sampleMessage },
-  { type: "text", content: "Welcome to chat " },
-  { type: "markdown", content: sampleMessage },
-  { type: "text", content: "Welcome to chat " },
-  {
-    type: "thinking",
-    content:
-      "This is a sample thinking message. It contains a lot of text to test the thinking content component.",
-  },
-  { type: "markdown", content: sampleMessage2 },
-];
-
+import { fetchChatMessages } from "@/services/chat";
 interface ChatPageClientProps {
   chatId: number;
 }
@@ -152,6 +23,12 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
   const [outputStateParams, setOutputStateParams] = useState<Record<string, string>>({});
   const pendingMarkdownRef = useRef<string>("");
   const pendingThinkingRef = useRef<string>("");
+  const [username, setUsername] = useState<string>("");
+
+  // Get username from localStorage after component mounts (client-side only)
+  useEffect(() => {
+    setUsername(localStorage.getItem("username") || "");
+  }, []);
 
   useEffect(() => {
     // When component mounts or `messages` changes, scroll into view
@@ -280,11 +157,6 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
     }
   };
 
-  const handleAttachFile = (file: File) => {
-    // TODO: Implement file attachment logic with the chatId
-    console.log(`Attaching file to chat ${chatId}:`, file.name);
-  };
-
   // Only establish WebSocket connection for existing chats
   const { sendMessage, canSend, error, isConnecting } = useChatWebSocket(
     handleWebSocketMessage,
@@ -300,7 +172,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
           !isLoadingMessages && (
             <div className="flex-1 flex flex-col text-left items-center justify-center gap-2">
               <h1 className="text-3xl font-semibold text-indigo-950 bg-indigo-300 p-1">
-                Hi there!
+                Hi {username || "there"}!
               </h1>
               <p className="text-sm text-gray-500">
                 Send a message to start the chat.{" "}
@@ -311,10 +183,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
         )}
       </div>
       <div ref={bottomAnchorRef} />
-      <ChatBar
-        onSend={onSend}
-        canSend={canSend && !isConnecting}
-      />
+      <ChatBar onSend={onSend} canSend={canSend && !isConnecting} />
     </div>
   );
 }

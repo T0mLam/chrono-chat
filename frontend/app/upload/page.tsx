@@ -8,6 +8,9 @@ import {
   listUploadedVideos,
   VideoDetails,
 } from "@/services/media";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Helper function to format duration from seconds to MM:SS
 export const formatDuration = (seconds: number | null): string => {
@@ -35,46 +38,11 @@ interface MediaGroup {
   items: MediaItem[];
 }
 
-// Sample media data
-const initialMediaData: MediaGroup[] = [
-  {
-    date: "Fri May 2",
-    items: [
-      {
-        title: "Space X Mars Landing",
-        time: "9:20pm",
-        image: "https://picsum.photos/200/30",
-        duration: "02:15",
-        isProcessing: true,
-        taskId: "task1",
-        progress: 45,
-      },
-      {
-        title: "龙飞船登陆火星",
-        time: "9:18pm",
-        image: "https://picsum.photos/200/30",
-        duration: "01:45",
-        isProcessing: false,
-      },
-    ],
-  },
-  {
-    date: "Sat Apr 26",
-    items: [
-      {
-        title: "Lego Hong Kong Set",
-        time: "12:17am",
-        image: "https://picsum.photos/200/30",
-        duration: "03:20",
-        isProcessing: false,
-      },
-    ],
-  },
-];
-
 export default function UploadPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [mediaData, setMediaData] = useState<MediaGroup[]>([]);
-  const [attachments, setAttachments] = useState<VideoDetails[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const fetchAllMedia = async () => {
     try {
@@ -142,6 +110,37 @@ export default function UploadPage() {
     };
   }, []);
 
+  // Initialize search term from URL params
+  useEffect(() => {
+    const searchQuery = searchParams.get("q") || "";
+    setSearchTerm(searchQuery);
+  }, [searchParams]);
+
+  // Update URL params when search term changes
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set("q", value);
+    } else {
+      params.delete("q");
+    }
+
+    // Update URL without causing a page reload
+    router.replace(`/upload?${params.toString()}`, { scroll: false });
+  };
+
+  // Filter media data based on search term
+  const filteredMediaData = mediaData
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        item.title.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    }))
+    .filter((group) => group.items.length > 0); // Remove empty groups
+
   const handleDelete = (itemToDelete: MediaItem) => {
     deleteVideo(itemToDelete.title);
   };
@@ -154,9 +153,32 @@ export default function UploadPage() {
       </p>
       <UploadDialog />
 
-      <div className="w-full max-w-5xl mt-8">
-        {/* show the media data in a card grouped by date */}
-        {mediaData.map((group) => (
+      {/* Search Input */}
+      <div className="w-full max-w-5xl mt-12 mb-4">
+        <div className="w-full max-w-sm">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search media files..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10 border-none max-w-sm rounded-xl shadow-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full max-w-5xl mt-4">
+        {/* Show no results message if search returns empty */}
+        {searchTerm && filteredMediaData.length === 0 && (
+          <div className="text-center text-muted-foreground py-8">
+            <p>No media files found matching "{searchTerm}"</p>
+          </div>
+        )}
+
+        {/* show the filtered media data in a card grouped by date */}
+        {filteredMediaData.map((group) => (
           <div key={group.date} className="mb-8">
             <h2 className="text-lg font-semibold mb-4">{group.date}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
