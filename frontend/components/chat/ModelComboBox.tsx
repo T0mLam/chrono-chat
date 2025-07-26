@@ -34,8 +34,8 @@ interface ModelComboBoxProps {
   onModelChange?: (model: string) => void;
   selectedModel: string;
   setSelectedModel: (model: string) => void;
-  modelCapabilities: string[];
-  setModelCapabilities: (capabilities: string[]) => void;
+  modelCapabilities?: string[];
+  setModelCapabilities?: (capabilities: string[]) => void;
 }
 
 export function ModelComboBox({
@@ -60,7 +60,7 @@ export function ModelComboBox({
     if (storedModel) {
       setSelectedModel(storedModel);
       getModelCapabilities(storedModel).then((res: any) => {
-        setModelCapabilities(res);
+        setModelCapabilities?.(res);
       });
     }
   }, []);
@@ -74,7 +74,7 @@ export function ModelComboBox({
   const setAndStoreSelectedModel = (model: string) => {
     setSelectedModel(model);
     getModelCapabilities(model).then((res: any) => {
-      setModelCapabilities(res);
+      setModelCapabilities?.(res);
     });
     localStorage.setItem(storageKey, model);
   };
