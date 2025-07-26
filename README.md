@@ -2,6 +2,10 @@
 
 **ChronoChat** is a conversational AI platform that enables users to chat with video content. It supports both YouTube and local uploads and uses retrieval-augmented generation (RAG) to answer questions using video transcripts, frames, and captions. Powered by local LLMs (via **Ollama**), ChronoChat streams real-time responses with full multimodal awareness, and additional support for images and PDF uploads.
 
+
+https://github.com/user-attachments/assets/983ef2d6-f9cb-410c-8d3a-13bcc2a35c0e
+
+
 > [!NOTE]
 > **ChronoChat is ideal for:** </br>
 > - ✅ Interviews, tutorials, and educational content </br>
