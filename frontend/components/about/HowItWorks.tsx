@@ -62,7 +62,7 @@ const steps: Step[] = [
 
 export function HowItWorks() {
   return (
-    <section className="py-16 px-8 min-h-screen overflow-hidden">
+    <section className="pt-16 pb-2 px-8 h-full overflow-hidden">
       <div className="max-w-7xl mx-auto min-h-[80vh] flex flex-col">
         <div className="text-center mb-8 flex-shrink-0">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
@@ -74,7 +74,7 @@ export function HowItWorks() {
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto flex-1 flex flex-col min-h-[400px]">
+        <div className="max-w-4xl mx-auto flex flex-col min-h-[400px]">
           <div className="flex-1 flex items-center justify-center px-12">
             <Carousel className="w-full">
               <CarouselContent>
@@ -111,7 +111,7 @@ export function HowItWorks() {
               <CarouselNext />
             </Carousel>
           </div>
-          <div className="flex justify-center items-center flex-shrink-0">
+          <div className="flex justify-center items-center flex-shrink-0 mt-4">
             <p className="text-xs text-gray-500 opacity-80">
               Swipe left and right to see more
             </p>

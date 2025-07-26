@@ -63,20 +63,6 @@ class ContextExtractor:
         collection = self.chroma_client.get_collection(collection_name)
         where = {"video_filename": video_filename}
 
-        if config["timestamp_range"]:
-            start_sec, end_sec = config["timestamp_range"]
-            where = {
-                "$and": [
-                    {"video_filename": video_filename},
-                    {
-                        "$or": [  # type: ignore
-                            {"$and": [{"ts_start": {"$gte": max(0, start_sec - 30)}}, {"ts_start": {"$lte": min(end_sec + 30, video_metadata["duration"])}}]},
-                            {"$and": [{"ts_end": {"$gte": max(0, start_sec - 30)}}, {"ts_end": {"$lte": min(end_sec + 30, video_metadata["duration"])}}]},
-                        ]
-                    }
-                ]
-            }
-
         results = collection.get(
             where=where,
             include=["metadatas", "embeddings"]
@@ -87,20 +73,6 @@ class ContextExtractor:
         collection = self.chroma_client.get_collection(collection_name)
         query_embedding = self._get_query_embedding(question, collection_name)
         where = {"video_filename": video_filename}
-
-        if config["timestamp_range"]:
-            start_sec, end_sec = config["timestamp_range"]
-            where = {
-                "$and": [
-                    {"video_filename": video_filename},
-                    {
-                        "$or": [  # type: ignore
-                            {"$and": [{"ts_start": {"$gte": max(0, start_sec - 30)}}, {"ts_start": {"$lte": min(end_sec + 30, video_metadata["duration"])}}]},
-                            {"$and": [{"ts_end": {"$gte": max(0, start_sec - 30)}}, {"ts_end": {"$lte": min(end_sec + 30, video_metadata["duration"])}}]},
-                        ]
-                    }
-                ]
-            }
 
         results = collection.query(
             query_embeddings=[query_embedding],

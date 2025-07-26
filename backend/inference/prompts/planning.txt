@@ -2,327 +2,39 @@
 **You have access to these videos and their metadata**: 
 $video_metadatas
 
+**User query**: "$question"
+
 Given the user query, output *only* valid JSON matching this schema:
 
 ```json
 {
-  "mode": "summary" | "timestamps" | "query",
-  "timestamp_range": [integer, integer] | null
+  "mode": "summary" | "query"
 }
 ```
 
----
-
 ### **Definitions**
 
-* **mode**
+* `"summary"` → high-level overview or metadata extraction
+* `"query"` → semantic lookup to answer a specific question
 
-  * `"summary"` → high-level overview or metadata extraction
-  * `"timestamps"` → list of key moments in a video
-  * `"query"` → semantic lookup to answer a specific question
+### **Routing Rules**
 
-* **timestamp_range**
-
-  * Optional two-element array `[start_seconds, end_seconds]` when the user refers to a specific time or range; otherwise `null`.
-
----
-
-### **Routing Rules (in priority order)**
-
-1. **Time-based queries** (mentions of specific times or ranges):
-
-   ```json
-   { "mode": "query", "timestamp_range": [start_secs, end_secs] }
-   ```
-
-   *(Timestamp_range used for specific moments or ranges)*
-
-2. **Key-timestamp requests** (asks for “key moments” or “highlights”):
-
-   ```json
-   { "mode": "timestamps", "timestamp_range": null }
-   ```
-
-3. **Specific questions** (e.g., “Why…?”, “What is…?”):
-
-   ```json
-   { "mode": "query", "timestamp_range": null }
-   ```
-
-4. **Summary & Metadata** (asks for “overview”, “summarize”, or “what is this video about”):
-
-   ```json
-   { "mode": "summary", "timestamp_range": null }
-   ```
-
----
+1. **Specific questions** (e.g., "Why…?", "What is…?", "When…?", "How…?") → `"query"`
+2. **Summary requests** (asks for "overview", "summarize", or "what is this video about") → `"summary"`
 
 ### **Examples**
 
-Below are 35 example input queries and the expected JSON router outputs.
-
-1. **Query:** "Summarize the videos."
-   **Output:**
-
-   ```json
-   { "mode": "summary", "timestamp_range": null }
-   ```
-
-2. **Query:** "List key moments in the demo."
-   **Output:**
-
-   ```json
-   { "mode": "timestamps", "timestamp_range": null }
-   ```
-
-3. **Query:** "What happens at 3:15?"
-   **Output:**
-
-   ```json
-   { "mode": "query", "timestamp_range": [195, 195] }
-   ```
-
-4. **Query:** "Show me content from 0:30 to 1:00."
-   **Output:**
-
-   ```json
-   { "mode": "query", "timestamp_range": [30, 60] }
-   ```
-
-5. **Query:** "Why did they mention blockchain?"
-   **Output:**
-
-   ```json
-   { "mode": "query", "timestamp_range": null }
-   ```
-
-6. **Query:** "Give me an overview of project_talk.mp4."
-   **Output:**
-
-   ```json
-   { "mode": "summary", "timestamp_range": null }
-   ```
-
-7. **Query:** "List highlights in session1.mp4 and session2.mp4."
-   **Output:**
-
-   ```json
-   { "mode": "timestamps", "timestamp_range": null }
-   ```
-
-8. **Query:** "At 2 minutes and 5 seconds, what do they explain?"
-   **Output:**
-
-   ```json
-   { "mode": "query", "timestamp_range": [125, 125] }
-   ```
-
-9. **Query:** "Find key timestamps in tutorial.mov."
-   **Output:**
-
-   ```json
-   { "mode": "timestamps", "timestamp_range": null }
-   ```
-
-10. **Query:** "What is covered around 1h15m?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [4500, 4500] }
-    ```
-
-11. **Query:** "Summarize annual_report.mov."
-    **Output:**
-
-    ```json
-    { "mode": "summary", "timestamp_range": null }
-    ```
-
-12. **Query:** "What’s the conclusion of the webinar?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": null }
-    ```
-
-13. **Query:** "Show highlights of the match."
-    **Output:**
-
-    ```json
-    { "mode": "timestamps", "timestamp_range": null }
-    ```
-
-14. **Query:** "Explain the graphs at 4:20."
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [260, 260] }
-    ```
-
-15. **Query:** "What topics are introduced in this video?"
-    **Output:**
-
-    ```json
-    { "mode": "summary", "timestamp_range": null }
-    ```
-
-16. **Query:** "What do they say between 5:00 and 5:30?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [300, 330] }
-    ```
-
-17. **Query:** "When does the speaker switch to topic B?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": null }
-    ```
-
-18. **Query:** "Key moments in the product demo."
-    **Output:**
-
-    ```json
-    { "mode": "timestamps", "timestamp_range": null }
-    ```
-
-19. **Query:** "Give metadata for video123.mp4."
-    **Output:**
-
-    ```json
-    { "mode": "summary", "timestamp_range": null }
-    ```
-
-20. **Query:** "Why did they mention GDPR at 7:45?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [465, 465] }
-    ```
-
-21. **Query:** "Summarize the introduction section."
-    **Output:**
-
-    ```json
-    { "mode": "summary", "timestamp_range": null }
-    ```
-
-22. **Query:** "What happens at 10 seconds?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [10, 10] }
-    ```
-
-23. **Query:** "List major takeaways from the talk."
-    **Output:**
-
-    ```json
-    { "mode": "timestamps", "timestamp_range": null }
-    ```
-
-24. **Query:** "What is the speaker's main point?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": null }
-    ```
-
-25. **Query:** "Show me the demo steps between 2:00 and 2:30."
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [120, 150] }
-    ```
-
-26. **Query:** "Overview of the training session."
-    **Output:**
-
-    ```json
-    { "mode": "summary", "timestamp_range": null }
-    ```
-
-27. **Query:** "Highlight the Q&A segment."
-    **Output:**
-
-    ```json
-    { "mode": "timestamps", "timestamp_range": null }
-    ```
-
-28. **Query:** "What does the presenter say at 8:08?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [488, 488] }
-    ```
-
-29. **Query:** "Give a brief summary of slide overview.mp4."
-    **Output:**
-
-    ```json
-    { "mode": "summary", "timestamp_range": null }
-    ```
-
-30. **Query:** "When do they discuss future plans?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": null }
-    ```
-
-31. **Query:** "Key timestamps of the workshop."
-    **Output:**
-
-    ```json
-    { "mode": "timestamps", "timestamp_range": null }
-    ```
-
-32. **Query:** "What happens at 1:30:00?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [5400, 5400] }
-    ```
-
-33. **Query:** "Summarize session3.mp4 content."
-    **Output:**
-
-    ```json
-    { "mode": "summary", "timestamp_range": null }
-    ```
-
-34. **Query:** "Why mention AI ethics?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": null }
-    ```
-
-35. **Query:** "Show highlights from the keynote."
-    **Output:**
-
-    ```json
-    { "mode": "timestamps", "timestamp_range": null }
-    ```
-
-36. **Query:** "Explain the demo segment from 1:05 to 1:50."
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [65, 110] }
-    ```
-
-37. **Query:** "What do they discuss between 12:15 and 14:45?"
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [735, 885] }
-    ```
-
-38. **Query:** "Show me the segment from 45 seconds to 2 minutes."
-    **Output:**
-
-    ```json
-    { "mode": "query", "timestamp_range": [45, 120] }
-    ```
+```json
+{ "mode": "summary" }
+```
+- "Summarize the videos"
+- "Give me an overview"
+- "What topics are covered?"
+
+```json
+{ "mode": "query" }
+```
+- "Why did they mention blockchain?"
+- "What happens at 3:15?"
+- "How does the demo work?"
+- "When do they discuss future plans?"

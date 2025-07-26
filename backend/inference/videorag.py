@@ -55,8 +55,7 @@ class VideoRAG:
         
     async def _plan(self, plan_messages: List[Dict[str, Any]], max_retries: int = 10, **kwargs):
         config = {
-                "mode": "summary",
-                "timestamp_range": None
+            "mode": "summary"
         }
         retry_count = 0
         
@@ -83,16 +82,10 @@ class VideoRAG:
             "properties": {
                 "mode": {
                     "type": "string",
-                    "enum": ["timestamps", "summary", "query"]
-                },
-                "timestamp_range": {
-                    "anyOf": [
-                        {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
-                        {"type": "null"}
-                    ]
+                    "enum": ["query", "summary"]
                 }
             },
-            "required": ["mode", "timestamp_range"]
+            "required": ["mode"]
         }
 
         try:
@@ -191,17 +184,21 @@ class VideoRAG:
         if video_names and video_mode != "ignore":
             # Use string replacement instead of .format() to avoid conflicts with JSON braces
             video_metadatas = [self.context_extractor.get_video_metadata_context(video_name) for video_name in video_names]
-            plan_prompt = Template(self.planning_text).substitute(video_metadatas=repr(video_metadatas))
+            plan_prompt = Template(self.planning_text).substitute(
+                question=question,
+                video_metadatas=repr(video_metadatas)
+            )
             plan_messages = [
-                {"role": "system", "content": plan_prompt},
-                {"role": "user", "content": question}
+                {"role": "system", "content": "You are a helpful assistant that can answer questions in json format."},
+                {"role": "user", "content": plan_prompt}
             ]
+            print(f"Plan messages: \n{plan_prompt}")
             if video_mode:
-                config = { "mode": video_mode, "timestamp_range": None }
-                print(f"Config: {config}")
+                config = { "mode": video_mode }
             else:
                 await send_client(status="selecting_mode")
                 config = await self._plan(plan_messages)
+                print(f"Config: {config}")
 
             if config["mode"] == "query":
                 await send_client(status="refining_query")
