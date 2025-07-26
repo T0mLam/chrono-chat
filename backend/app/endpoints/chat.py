@@ -98,3 +98,10 @@ async def update_planner_model(model_name: str):
         video_rag.ollama_client.planner_llm = model_name
     print(f"Planner model updated to: {model_name}")
     return {"message": "Planner model updated successfully"}
+
+@router.get("/get_model_capabilities")
+async def get_model_capabilities(model_name: str):
+    """Get the capabilities of a model."""
+    model_info = await video_rag.ollama_client.client.show(model_name)
+    model_capabilities = model_info["capabilities"]
+    return {"capabilities": model_capabilities}

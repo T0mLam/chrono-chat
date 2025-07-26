@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { ChatInput } from "@/components/ui/chat/chat-input";
 import { Button } from "@/components/ui/button";
 import {
-  Paperclip,
   CornerDownLeft,
   Loader2,
   Lightbulb,
@@ -36,15 +35,15 @@ interface ChatBarProps {
     videoMode: string,
     files: File[]
   ) => Promise<void>;
-  onAttachFile?: (file: File) => void;
   canSend: boolean;
 }
 
 export function TooltipToggle({
   children,
   tooltip,
+  disabled,
   ...props
-}: { children: React.ReactNode; tooltip: string } & React.ComponentProps<
+}: { children: React.ReactNode; tooltip: string; disabled?: boolean } & React.ComponentProps<
   typeof Toggle
 >) {
   return (
@@ -52,7 +51,7 @@ export function TooltipToggle({
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="ml-2">
-            <Toggle {...props}>
+            <Toggle {...props} disabled={disabled}>
               {children}
               <span className="sr-only">{tooltip}</span>
             </Toggle>
@@ -155,15 +154,19 @@ export function VideoModeToggles({
   );
 }
 
-export default function ChatBar({
-  onSend,
-  canSend,
-}: ChatBarProps) {
+export default function ChatBar({ onSend, canSend }: ChatBarProps) {
   const [isThinkingEnabled, setIsThinkingEnabled] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
   const [selectedVideoMode, setSelectedVideoMode] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [modelCapabilities, setModelCapabilities] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!modelCapabilities.includes("thinking")) {
+      setIsThinkingEnabled(false);
+    }
+  }, [modelCapabilities]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,13 +187,6 @@ export default function ChatBar({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && onAttachFile) {
-      onAttachFile(file);
-    }
-  };
-
   const handleKeyDownForSubmit = async (
     e: React.KeyboardEvent<HTMLTextAreaElement>
   ) => {
@@ -207,7 +203,7 @@ export default function ChatBar({
           selectedVideos,
           selectedVideoMode,
           selectedFiles
-        );        
+        );
       }
     }
   };
@@ -231,6 +227,7 @@ export default function ChatBar({
         </div>
         <div className="flex items-center p-3 pt-0 bg-background">
           <FileUploadComponent
+            allowImage={modelCapabilities.includes("vision")}
             selectedFiles={selectedFiles}
             setSelectedFiles={setSelectedFiles}
           />
@@ -245,11 +242,14 @@ export default function ChatBar({
             tooltip="Enable thinking"
             pressed={isThinkingEnabled}
             onPressedChange={setIsThinkingEnabled}
+            disabled={!modelCapabilities.includes("thinking")}
           >
             <Lightbulb className="size-4" />
           </TooltipToggle>
 
           <ModelComboBox
+            modelCapabilities={modelCapabilities}
+            setModelCapabilities={setModelCapabilities}
             selectedModel={selectedModel}
             setSelectedModel={setSelectedModel}
           />

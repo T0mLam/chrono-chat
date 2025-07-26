@@ -21,6 +21,7 @@ import {
 
 import axiosClient from "@/lib/axiosClient";
 import { useEffect, useState } from "react";
+import { getModelCapabilities } from "@/services/chat";
 
 interface Model {
   name: string;
@@ -33,6 +34,8 @@ interface ModelComboBoxProps {
   onModelChange?: (model: string) => void;
   selectedModel: string;
   setSelectedModel: (model: string) => void;
+  modelCapabilities: string[];
+  setModelCapabilities: (capabilities: string[]) => void;
 }
 
 export function ModelComboBox({
@@ -41,6 +44,8 @@ export function ModelComboBox({
   selectedModel,
   onModelChange,
   setSelectedModel,
+  modelCapabilities,
+  setModelCapabilities,
 }: ModelComboBoxProps) {
   const [open, setOpen] = useState<boolean>(false);
   const [models, setModels] = useState<Model[]>([]);
@@ -54,6 +59,9 @@ export function ModelComboBox({
     const storedModel = localStorage.getItem(storageKey);
     if (storedModel) {
       setSelectedModel(storedModel);
+      getModelCapabilities(storedModel).then((res: any) => {
+        setModelCapabilities(res);
+      });
     }
   }, []);
 
@@ -65,6 +73,9 @@ export function ModelComboBox({
 
   const setAndStoreSelectedModel = (model: string) => {
     setSelectedModel(model);
+    getModelCapabilities(model).then((res: any) => {
+      setModelCapabilities(res);
+    });
     localStorage.setItem(storageKey, model);
   };
 

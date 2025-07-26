@@ -54,3 +54,10 @@ export async function updatePlannerModel(model_name: string) {
   );
   return response.data;
 }
+
+export async function getModelCapabilities(model_name: string) {
+  const response = await axiosClient.get(
+    `/chat/get_model_capabilities?model_name=${encodeURIComponent(model_name)}`
+  );
+  return response.data.capabilities;
+}

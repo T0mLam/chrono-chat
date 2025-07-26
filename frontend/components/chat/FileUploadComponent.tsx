@@ -12,9 +12,11 @@ import { FileUploadDataTable } from "./FileUploadDataTable";
 export function FileUploadComponent({
   selectedFiles,
   setSelectedFiles,
+  allowImage,
 }: {
   selectedFiles: File[];
   setSelectedFiles: (files: File[]) => void;
+  allowImage: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,7 +51,7 @@ export function FileUploadComponent({
               max={3}
               onChange={handleFileSelect}
               className="hidden"
-              accept="image/*,.pdf"
+              accept={allowImage ? "image/*,.pdf" : ".pdf"}
             />
           </div>
         </TooltipTrigger>
