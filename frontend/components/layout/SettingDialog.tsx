@@ -85,7 +85,8 @@ export function SettingDialog() {
               <Label htmlFor="model-1">Planner Model</Label>
               <div className="text-xs text-gray-500 mt-1">
                 Model used for selecting retrieval modes, creating chat titles,
-                summarizing the chat and refining queries for RAG.
+                summarizing the chat and refining queries for RAG. (Default:
+                qwen3:0.6b)
               </div>
             </div>
             <ModelComboBox
