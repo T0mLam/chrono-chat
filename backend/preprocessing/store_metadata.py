@@ -56,7 +56,7 @@ def _extract_video_metadata(video_path: str, audio_path: str) -> Dict[str, Any]:
 
     metadata = {
         "video_path": video_path,
-        "audio_path": audio_path,
+        "audio_path": audio_path,   
         "duration": float(probe["format"]["duration"]), # in seconds
         "width": int(video_streams["width"]), # in pixels
         "height": int(video_streams["height"]), # in pixels

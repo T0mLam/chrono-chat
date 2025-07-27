@@ -34,14 +34,14 @@ def extract_audio(video_path: str, audio_dir: str = "./data/audio") -> str:
     os.makedirs(audio_dir, exist_ok=True)
     filename = os.path.splitext(os.path.basename(video_path))[0] + ".wav"
     audio_path = os.path.join(audio_dir, filename)
-
+    
     (
         ffmpeg
         .input(video_path)
         .output(audio_path, acodec='pcm_s16le', ac=1, ar='16000')
-        .run(overwrite_output=True, quiet=True)
+        .run(overwrite_output=True)
     )
-
+    
     return audio_path
 
 def ingest_video(
