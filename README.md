@@ -1,6 +1,6 @@
 # ChronoChat
 
-**ChronoChat** is a conversational AI platform that enables users to chat with video content. It supports both YouTube and local uploads and uses retrieval-augmented generation (RAG) to answer questions using video transcripts, frames, and captions. Powered by local LLMs (via **Ollama**), ChronoChat streams real-time responses with full multimodal awareness, and additional support for images and PDF uploads.
+**ChronoChat** is a UI for **Ollama** that enables users to chat with video content. It supports both YouTube and local uploads and uses retrieval-augmented generation (RAG) to answer questions using video transcripts, frames, and captions. Powered by local LLMs, ChronoChat streams real-time responses with additional support for images and PDF uploads.
 
 
 https://github.com/user-attachments/assets/983ef2d6-f9cb-410c-8d3a-13bcc2a35c0e
@@ -10,6 +10,8 @@ https://github.com/user-attachments/assets/983ef2d6-f9cb-410c-8d3a-13bcc2a35c0e
 > **ChronoChat is ideal for:** </br>
 > - ✅ Interviews, tutorials, and educational content </br>
 > - ❌ Not suited for animations or silent videos </br>
+>
+> **⚠️ Requires a GPU for optimal performance**
 
 ## 🏁 Getting Started
 
@@ -30,14 +32,6 @@ python cli.py install
 ### 3. 🤖 Install Ollama
 
 If you haven’t already, install [Ollama](https://ollama.com):
-
-```bash
-# macOS
-brew install ollama
-
-# Windows / Linux
-# Visit: https://ollama.com/download
-```
 
 ### 4. 🖥️ Start the Ollama Server:
 
@@ -80,7 +74,6 @@ graph TD
   end
 
   subgraph "Backend (FastAPI & Async Worker)"
-    API["🧭 FastAPI server"]
     ChatRouter["🗨️ Chat router"]
     MediaRouter["🎬 Media router"]
     VideoRAG["🧠 VideoRAG engine"]
@@ -98,7 +91,7 @@ graph TD
   ChatUI -- "File upload" --> APIClient
   ChatUI <--"Text query" --> WSClient
 
-  APIClient <--> API
+  APIClient <--> MediaRouter
   WSClient <--> ChatRouter
   ChatRouter --> VideoRAG
   VideoRAG <-- "Video query" --> ContextExtractor
@@ -107,7 +100,6 @@ graph TD
   ContextExtractor <--> LLMClient
   Retriever <--> MediaDB
 
-  API --> MediaRouter
   MediaRouter --> MediaStorage
   MediaRouter --> VideoQueue
   VideoQueue --> Worker
