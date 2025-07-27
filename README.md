@@ -11,21 +11,55 @@ https://github.com/user-attachments/assets/983ef2d6-f9cb-410c-8d3a-13bcc2a35c0e
 > - ✅ Interviews, tutorials, and educational content </br>
 > - ❌ Not suited for animations or silent videos </br>
 
+## 🏁 Getting Started
+
+### 1. 📦 Set Up Python Environment
+
+```bash
+# Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
+
+### 2. 🔨 Install Dependencies for ChronoChat
+
+```bash
+python cli.py install
+```
+
+### 3. 🤖 Install Ollama
+
+If you haven’t already, install [Ollama](https://ollama.com):
+
+```bash
+# macOS
+brew install ollama
+
+# Windows / Linux
+# Visit: https://ollama.com/download
+```
+
+### 4. 🖥️ Start the Ollama Server:
+
+```bash
+ollama serve
+```
+
+### 5. 🚀 Launch ChronoChat
+
+```bash
+python cli.py start
+```
+
+Then open your browser at: [http://localhost:3000](http://localhost:3000)
+
 ## ✨ Key Features
 
 * 🔍 **Video RAG**: Uses CLIP, Whisper, and BLIP embeddings for frame, audio, and caption-based retrieval.
 * 🧠 **LLM Planning**: Models generate reasoning chains, plan actions, and adapt to single or multi-video chats.
 * 🔌 **Streaming Responses**: Live WebSocket chat with markdown rendering and response progress updates.
 * 🎥 **Multi-Video Support**: Search and reason across multiple videos in a single conversation.
-* 📎 **Attach Files**: Supports uploading PDFs and documents for context-aware responses (extensible).
-
-## 🏁 Getting Started
-
-```bash
-python cli.py start
-```
-
-Then go to: [http://localhost:3000](http://localhost:3000)
+* 📎 **Attach Files**: Supports uploading PDFs and images.
 
 ## 🧱 Architecture
 
@@ -45,7 +79,7 @@ graph TD
     WSClient["🔄 WebSocket client"]
   end
 
-  subgraph "Backend (FastAPI & Worker)"
+  subgraph "Backend (FastAPI & Async Worker)"
     API["🧭 FastAPI server"]
     ChatRouter["🗨️ Chat router"]
     MediaRouter["🎬 Media router"]
@@ -54,52 +88,46 @@ graph TD
     Retriever["📦 ChromaDB retriever"]
     LLMClient["🤖 LLM client"]
     Worker["⚙️ Ingestion worker"]
-    MediaDB["🗄️ Vector DB"]
+    MediaDB["🗄️ ChromaDB"]
     MediaStorage["📁 Video and metadata storage"]
     VideoQueue["📮 Processing queue"]
   end
 
   Sidebar --> ChatUI
   UploadUI --> APIClient
-  ChatUI --> APIClient
-  ChatUI --> WSClient
+  ChatUI -- "File upload" --> APIClient
+  ChatUI <--"Text query" --> WSClient
 
   APIClient <--> API
-  WSClient --> ChatRouter
+  WSClient <--> ChatRouter
   ChatRouter --> VideoRAG
-  VideoRAG --> ContextExtractor
-  ContextExtractor --> Retriever
-  Retriever --> MediaDB
-  VideoRAG --> LLMClient
-
-  ChatRouter --> WSClient
-  WSClient --> ChatUI
+  VideoRAG <-- "Video query" --> ContextExtractor
+  VideoRAG <-- "Other query" --> LLMClient
+  ContextExtractor <--> Retriever
+  ContextExtractor <--> LLMClient
+  Retriever <--> MediaDB
 
   API --> MediaRouter
-  MediaRouter --> MediaDB
   MediaRouter --> MediaStorage
   MediaRouter --> VideoQueue
   VideoQueue --> Worker
-  Worker --> ContextExtractor
-  Worker --> Retriever
   Worker --> MediaDB
-  Worker --> MediaStorage
 ```
 
 ## ⚙️ Tech Stack
 
 | Layer      | Tools                                 |
 | ---------- | ------------------------------------- |
-| Frontend   | Next.js, TailwindCSS, TypeScript      |
-| Backend    | FastAPI, Celery, SQLite, ChromaDB     |
+| Frontend   | Next.js, TailwindCSS, Shadcn, TypeScript |
+| Backend    | FastAPI, AsyncIO, SQLite, ChromaDB     |
 | Embeddings | CLIP (frames), Whisper (audio), BLIP  |
-| LLM        | Ollama (default: `qwen:0.6b`)         |
+| LLM        | Ollama       |
 | Storage    | Local files, ChromaDB vectors, SQLite |
 
 ## 🧠 How It Works
 
 1. **Ingest Video**: Extracts audio, frames, and captions from YouTube/local videos.
 2. **Embed Content**: Computes multimodal embeddings and stores them in ChromaDB.
-3. **Chat Interaction**: LLM receives the user query and plans an action.
+3. **Chat Interaction**: LLM receives the user query and selects a retrieval mode.
 4. **RAG Flow**: Relevant chunks are retrieved based on video context.
 5. **Response Streaming**: Final output is streamed to the user in real time.
