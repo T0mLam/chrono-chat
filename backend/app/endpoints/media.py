@@ -15,6 +15,7 @@ from preprocessing.store_metadata import (
     create_video_metadata_table,
 )
 from preprocessing.ingest_video import delete_video_files
+from utils.sanitize_filename import sanitize_filename
 
 router = APIRouter()
 
@@ -84,7 +85,9 @@ async def upload_local_video(file: UploadFile = File(...), background_tasks: Bac
             raise HTTPException(status_code=400, detail="Invalid file extension")
             
         os.makedirs(UPLOAD_DIR, exist_ok=True)
-        file_path = os.path.join(UPLOAD_DIR, file.filename)
+        # Sanitize the filename to handle special characters
+        sanitized_filename = sanitize_filename(file.filename)
+        file_path = os.path.join(UPLOAD_DIR, sanitized_filename)
         
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -120,7 +123,19 @@ async def check_youtube_video(url: str = Query(..., description="YouTube video U
 @router.post("/upload/youtube_video", response_model=VideoResponse)
 async def upload_youtube_video(url: str = Query(..., description="YouTube video URL"), background_tasks: BackgroundTasks = BackgroundTasks()):
     try:
-        file_path = download_youtube_video(url, output_video_path=UPLOAD_DIR)
+        downloaded_file_path = download_youtube_video(url, output_video_path=UPLOAD_DIR)
+        
+        # Sanitize the filename to handle special characters
+        original_filename = os.path.basename(downloaded_file_path)
+        sanitized_filename = sanitize_filename(original_filename)
+        
+        # Rename the file if needed
+        if original_filename != sanitized_filename:
+            sanitized_file_path = os.path.join(UPLOAD_DIR, sanitized_filename)
+            os.rename(downloaded_file_path, sanitized_file_path)
+            file_path = sanitized_file_path
+        else:
+            file_path = downloaded_file_path
         
         # Start video processing task
         task_id = str(uuid.uuid4())

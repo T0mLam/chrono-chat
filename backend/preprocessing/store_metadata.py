@@ -4,19 +4,6 @@ from typing import Dict, Any, Optional
 import ffmpeg
 import hashlib
 
-# def compute_video_id(video_path: str) -> str:
-#     """
-#     Compute a unique identifier for the video based on its path.
-    
-#     Args:
-#         video_path (str): Path to the video file.
-
-#     Returns:
-#         str: SHA-256 hash of the video path.
-#     """
-#     filename = os.path.basename(video_path) 
-#     return hashlib.sha256(video_path.encode('utf-8')).hexdigest()
-
 def video_exists(video_path: str, db_path: str = "./data/video_metadata.db") -> bool:
     """
     Check if a video exists in the SQLite database.
