@@ -41,16 +41,24 @@ export function Searchbox({ open, setOpen }: SearchboxProps) {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchChats = async () => {
-      const chats = await fetchAllChats();
-      setChats(chats);
+    const fetchData = async () => {
+      try {
+        const [chat, videos] = await Promise.all([
+          fetchAllChats(),
+          listUploadedVideos(),
+        ]);
+        setChats(chat);
+        setVideos(videos);
+      } catch (error) {
+        setChats([]);
+        setVideos([]);
+      }
     };
-    fetchChats();
-    const fetchVideos = async () => {
-      const videos = await listUploadedVideos();
-      setVideos(videos);
-    };
-    fetchVideos();
+    fetchData();
+
+    const interval = setInterval(fetchData, 3000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -58,6 +66,7 @@ export function Searchbox({ open, setOpen }: SearchboxProps) {
       <CommandInput placeholder="Search..." />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
+        { videos.length > 0 &&
         <CommandGroup heading="Media">
           {videos.map((video) => (
             <CommandItem
@@ -78,13 +87,15 @@ export function Searchbox({ open, setOpen }: SearchboxProps) {
             </CommandItem>
           ))}
         </CommandGroup>
-        <CommandSeparator className="mb-1" />
-        <CommandGroup heading="Chats">
-          {chats.map((chat) => (
-            <CommandItem
-              key={chat.chat_id}
-              className="py-1"
-              onSelect={() => {
+        }
+        { chats.length > 0 && videos.length > 0 && <CommandSeparator className="mb-1" />}
+        { chats.length > 0 && 
+          <CommandGroup heading="Chats">
+            {chats.map((chat) => (
+              <CommandItem
+                key={chat.chat_id}
+                className="py-1"
+                onSelect={() => {
                 setOpen(false);
                 router.push(`/chat/${chat.chat_id}`);
               }}
@@ -97,6 +108,7 @@ export function Searchbox({ open, setOpen }: SearchboxProps) {
             </CommandItem>
           ))}
         </CommandGroup>
+        }
       </CommandList>
     </CommandDialog>
   );
