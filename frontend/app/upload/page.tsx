@@ -11,16 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-
-// Helper function to format duration from seconds to MM:SS
-export const formatDuration = (seconds: number | null): string => {
-  if (!seconds) return "--:--";
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
-    .toString()
-    .padStart(2, "0")}`;
-};
+import { formatDuration } from "@/lib/utils";
 
 interface MediaItem {
   title: string;
