@@ -48,17 +48,3 @@ def sample_frames(
 
     cap.release()
     return frames
-
-if __name__ == "__main__":
-    # testing 
-
-    # video_path = "trump_zelensky.mp4"
-    # sample_interval_sec = 5.0  # Sample every 5 seconds
-
-    # try:
-    #     frames = sample_frames(video_path, sample_interval_sec)
-    #     for timestamp, frame in frames:
-    #         print(f"Timestamp: {timestamp:.2f} seconds, Frame size: {frame.size}")
-    # except Exception as e:
-    #     print(f"Error: {e}")
-    pass
