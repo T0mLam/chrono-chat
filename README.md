@@ -29,17 +29,29 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 python cli.py install
 ```
 
-### 3. 🤖 Install Ollama
+### 3. ⚙️ Install PyTorch with CUDA (Recommended)
 
-If you haven’t already, install [Ollama](https://ollama.com):
+For GPU acceleration, install the CUDA-enabled version of PyTorch: <br />
+Visit https://pytorch.org/get-started/locally/ to get the correct command for your system.
 
-### 4. 🖥️ Start the Ollama Server:
+> 💡 If you don’t have an NVIDIA GPU or don’t want CUDA, skip this step
+
+### 4. 🎞️ Install FFmpeg
+
+ChronoChat requires `ffmpeg` for processing video and audio. <br />
+Download from: [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+
+### 5. 🤖 Install Ollama
+
+If you haven’t already, install [Ollama](https://ollama.com)
+
+### 6. 🖥️ Start the Ollama Server
 
 ```bash
 ollama serve
 ```
 
-### 5. 🚀 Launch ChronoChat
+### 7. 🚀 Launch ChronoChat
 
 ```bash
 python cli.py start
