@@ -39,7 +39,7 @@ def extract_audio(video_path: str, audio_dir: str = "./data/audio") -> str:
         ffmpeg
         .input(video_path)
         .output(audio_path, acodec='pcm_s16le', ac=1, ar='16000')
-        .run(overwrite_output=True)
+        .run(overwrite_output=True, quiet=True)
     )
     
     return audio_path
