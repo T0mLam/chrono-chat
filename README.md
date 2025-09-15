@@ -1,6 +1,6 @@
 # ChronoChat
 
-**ChronoChat** is a UI for **Ollama** that enables users to chat with video content using non vision/video-language models (VLMs). It supports both YouTube and local uploads and uses retrieval-augmented generation (RAG) to answer questions using video transcripts, frames, and captions. Powered by local LLMs, ChronoChat streams real-time responses with additional support for images and PDF uploads.
+**ChronoChat** is video-RAG platform built on top of **Ollama** that enables users to chat with video content using non vision/video-language models (VLMs). It supports both YouTube and local uploads and uses retrieval-augmented generation (RAG) to answer questions using video transcripts, frames, and captions. Powered by local LLMs, ChronoChat streams real-time responses with additional support for images and PDF uploads.
 
 
 https://github.com/user-attachments/assets/983ef2d6-f9cb-410c-8d3a-13bcc2a35c0e
@@ -135,3 +135,4 @@ graph TD
 3. **Chat Interaction**: LLM receives the user query and selects a retrieval mode.
 4. **RAG Flow**: Relevant chunks are retrieved based on video context.
 5. **Response Streaming**: Final output is streamed to the user in real time.
+
